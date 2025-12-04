@@ -21,7 +21,7 @@ public static class XmlStatisticsHelper
 
     /// <summary>
     /// Parse login statistics nodes at all levels in XML (fully recursive expansion)
-    /// Support：Year → HalfYear → Quarter → Month → Week → Day
+    /// Support：Year -> HalfYear -> Quarter -> Month -> Week -> Day
     /// Both UserInfo and UserGroupInfo are supported
     /// </summary>
     public static List<XmlNodeEntry> ParseStatistics(XElement rootLoginStatistics)

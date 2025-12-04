@@ -28,8 +28,8 @@ namespace BlazorWebApp.Services
         public List<(string ClientName, string FileName)> GetAllFiles()
         {
             var list = new List<(string ClientName, string FileName)>();
-
-            foreach (var clientDir in Directory.GetDirectories(_basePath))
+            // Order by Directory Name (Customer Name)
+            foreach (var clientDir in Directory.GetDirectories(_basePath).OrderBy(dir => dir))
             {
                 string clientName = Path.GetFileName(clientDir);
 

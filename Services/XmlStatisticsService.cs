@@ -15,8 +15,8 @@ public class XmlStatisticsService
     public Dictionary<string, List<(DateOnly Date, int Count, string Level)>> LoadStatistics()
     {
         var result = new Dictionary<string, List<(DateOnly, int, string)>>();
-
-        foreach (var clientDir in Directory.GetDirectories(_uploadsPath))
+        // Order by Directory Name (Customer Name)
+        foreach (var clientDir in Directory.GetDirectories(_uploadsPath).OrderBy(dir => dir))
         {
             var clientName = Path.GetFileName(clientDir);
 
