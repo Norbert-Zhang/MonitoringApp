@@ -1,0 +1,286 @@
+using BlazorWebApp.Components;
+using BlazorWebApp.Services;
+
+using System.Xml.Linq;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = true;
+});
+
+
+// Add the services
+builder.Services.AddSingleton<FileService>();
+builder.Services.AddSingleton<XmlStatisticsService>();
+
+var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+app.UseAntiforgery();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+// XML-File upload API
+app.MapPost("/api/upload-xml", async (
+    HttpRequest request,
+    IWebHostEnvironment env,
+    IConfiguration config) =>
+{
+    var token = request.Headers["x-api-key"].ToString();
+    var expectedToken = config["ApiSettings:UploadApiToken"];
+
+    if (token != expectedToken)
+        return Results.Unauthorized();
+
+    var client = request.Query["client"].ToString();
+    if (string.IsNullOrWhiteSpace(client))
+        return Results.BadRequest("Customer name is required.");
+
+    if (!request.HasFormContentType)
+        return Results.BadRequest("Form data is required.");
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.FirstOrDefault();
+
+    if (file == null)
+        return Results.BadRequest("XML file is required.");
+
+    if (!file.FileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest("Only XML files are allowed.");
+
+    var clientDir = Path.Combine(env.ContentRootPath, "Uploads", client);
+    Directory.CreateDirectory(clientDir);
+
+    var savePath = Path.Combine(clientDir, file.FileName);
+
+    using var fs = new FileStream(savePath, FileMode.Create);
+    await file.CopyToAsync(fs);
+
+    return Results.Ok($"Successfully uploaded: the '{file.FileName}' file for customer '{client}'.");
+});
+
+// XML-File download API
+app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
+{
+    var path = Path.Combine(env.ContentRootPath, "Uploads", client, file);
+
+    if (!System.IO.File.Exists(path))
+        return Results.NotFound();
+
+    var bytes = System.IO.File.ReadAllBytes(path);
+    return Results.File(bytes, "application/xml", file);
+});
+
+static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
+{
+    var sheetData = new SheetData();
+    foreach (var r in rows)
+    {
+        var row = new Row();
+        foreach (var c in r)
+        {
+            row.Append(new Cell { CellValue = new CellValue(c), DataType = CellValues.String });
+        }
+        sheetData.Append(row);
+    }
+    ws.Worksheet = new Worksheet(sheetData);
+}
+
+//Excel-File download API
+app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
+{
+    var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
+    if (!System.IO.File.Exists(xmlPath))
+        return Results.NotFound();
+
+    var xdoc = XDocument.Load(xmlPath);
+
+    using var mem = new MemoryStream();
+    using (var doc = SpreadsheetDocument.Create(mem, SpreadsheetDocumentType.Workbook))
+    {
+        var wb = doc.AddWorkbookPart();
+        wb.Workbook = new Workbook();
+        var sheets = wb.Workbook.AppendChild(new Sheets());
+
+        // --------------------
+        // Sheet 1: Total Stats
+        // --------------------
+        var root = xdoc.Root!;
+        var login = root.Element("LoginStatistics")!;
+        var total = login.Element("TotalStatistics")!;
+
+        var ws1 = wb.AddNewPart<WorksheetPart>();
+
+        var totalRows = new List<List<string>>
+        {
+            new() { "Field", "Value" },
+            new() { "SystemName", (string)root.Attribute("SystemName")! },
+            new() { "SystemVersion", (string)root.Attribute("SystemVersion")! },
+            new() { "StartDate", (string)login.Attribute("StartDate")! },
+            new() { "TotalLoginCount", (string)total.Attribute("Count")! },
+            new() { "", "" },
+            // User statistics table
+            new() { "UserID", "Count" }
+        };
+        // add user info rows
+        totalRows.AddRange(
+            total.Element("Users")?.Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
+            .Select(u => new List<string>
+            {
+                (string)u.Attribute("ID")!,
+                (string)u.Attribute("Count")!
+            }) ?? Enumerable.Empty<List<string>>()
+        );
+        totalRows.Add(new List<string> { "", "" });
+        // UserGroup statistics header
+        totalRows.Add(new List<string> { "UserGroupID", "Count" });
+        // add user group rows
+        totalRows.AddRange(
+            total.Element("UserGroups")?
+            .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserGroupInfo")
+            .Select(g => new List<string>
+            {
+                (string)g.Attribute("ID")!,
+                (string)g.Attribute("Count")!
+            }) ?? Enumerable.Empty<List<string>>()
+        );
+
+        WriteSheet(ws1, totalRows);
+
+        sheets.Append(new Sheet
+        {
+            Id = wb.GetIdOfPart(ws1),
+            SheetId = 1,
+            Name = "TotalStats"
+        });
+
+        // --------------------
+        // Sheet 2: Users Hierarchy
+        // --------------------
+        var entries = XmlStatisticsHelper.ParseStatistics(total);
+
+        var ws2 = wb.AddNewPart<WorksheetPart>();
+        WriteSheet(ws2, new List<List<string>>
+        {
+            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserID","Count" }
+        }.Concat(
+            entries
+                .Where(e => e.Target == "User") // users
+                .Select(e => new List<string>
+                {
+                    e.Level,
+                    e.Year?.ToString() ?? "",
+                    e.HalfYear?.ToString() ?? "",
+                    e.Quarter?.ToString() ?? "",
+                    e.Month?.ToString() ?? "",
+                    e.Week?.ToString() ?? "",
+                    e.Day?.ToString() ?? "",
+                    e.Id,
+                    e.Count.ToString()
+                })
+        ).ToList());
+
+        sheets.Append(new Sheet
+        {
+            Id = wb.GetIdOfPart(ws2),
+            SheetId = 2,
+            Name = "UserHierarchy"
+        });
+
+        // --------------------
+        // Sheet 3: Groups Hierarchy
+        // --------------------
+        var ws3 = wb.AddNewPart<WorksheetPart>();
+        WriteSheet(ws3, new List<List<string>>
+        {
+            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserGroupID","Count" }
+        }.Concat(
+            entries
+                .Where(e => e.Target == "UserGroup") // groups
+                .Select(e => new List<string>
+                {
+                    e.Level,
+                    e.Year?.ToString() ?? "",
+                    e.HalfYear?.ToString() ?? "",
+                    e.Quarter?.ToString() ?? "",
+                    e.Month?.ToString() ?? "",
+                    e.Week?.ToString() ?? "",
+                    e.Day?.ToString() ?? "",
+                    e.Id,
+                    e.Count.ToString()
+                })
+        ).ToList());
+
+        sheets.Append(new Sheet
+        {
+            Id = wb.GetIdOfPart(ws3),
+            SheetId = 3,
+            Name = "UserGroupHierarchy"
+        });
+
+        // --------------------
+        // Sheet 4: Stats Hierarchy
+        // --------------------
+        var ws4 = wb.AddNewPart<WorksheetPart>();
+        WriteSheet(ws4, new List<List<string>>
+        {
+            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","Count" }
+        }.Concat(
+            entries
+                .Where(e => e.Target == "Stats") // Stats
+                .Select(e => new List<string>
+                {
+                    e.Level,
+                    e.Year?.ToString() ?? "",
+                    e.HalfYear?.ToString() ?? "",
+                    e.Quarter?.ToString() ?? "",
+                    e.Month?.ToString() ?? "",
+                    e.Week?.ToString() ?? "",
+                    e.Day?.ToString() ?? "",
+                    e.Count.ToString()
+                })
+        ).ToList());
+
+        sheets.Append(new Sheet
+        {
+            Id = wb.GetIdOfPart(ws4),
+            SheetId = 4,
+            Name = "StatsHierarchy"
+        });
+
+        wb.Workbook.Save();
+    }
+
+    mem.Position = 0;
+    var excelName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
+
+    return Results.File(
+        mem.ToArray(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        excelName
+    );
+});
+
+app.Run();

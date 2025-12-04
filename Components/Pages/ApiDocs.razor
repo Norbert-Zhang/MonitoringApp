@@ -1,0 +1,180 @@
+﻿@page "/api-docs"
+@rendermode InteractiveServer
+
+<h2>API Documentation</h2>
+<p class="text-secondary">
+    This page provides documentation for the automatic XML upload API used
+    to import customer login statistics into the system.
+</p>
+
+<hr />
+
+<h3>1. Overview</h3>
+<p>
+    The API allows external systems to upload XML statistics files automatically,
+    without using the manual Upload page.
+    All uploaded files are stored in the same directory structure and processed identically.
+</p>
+
+<ul>
+    <li>Method: <strong>POST</strong></li>
+    <li>Content Type: <strong>multipart/form-data</strong></li>
+    <li>Authentication: <strong>Token-based</strong></li>
+</ul>
+
+<hr />
+
+<h3>2. Endpoint</h3>
+<div class="alert alert-secondary">
+    <strong>POST</strong> /api/upload-xml
+</div>
+
+<hr />
+
+<h3>3. Authentication</h3>
+<p>
+    Each client must provide a valid API token using the <strong>X-Api-Key</strong> header.
+</p>
+
+<div class="alert alert-warning">
+    Example:
+    <pre class="bg-light p-3">
+        <text>
+        X-Api-Key: YOUR_SECRET_TOKEN
+        </text>
+    </pre>
+</div>
+
+<p>
+    Requests without a valid token will receive a 401 Unauthorized response.
+</p>
+
+<hr />
+
+<h3>4. Request Parameters</h3>
+
+<table class="table table-bordered w-75">
+    <thead class="table-light">
+        <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>client</td>
+            <td>string</td>
+            <td>The customer name (folder name for storing XML files)</td>
+        </tr>
+        <tr>
+            <td>file</td>
+            <td>file</td>
+            <td>XML statistics file</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr />
+
+<h3>5. Example Request</h3>
+
+<h5>Using cURL</h5>
+<pre class="bg-light p-3"><text>
+curl -X POST "https://yourserver/api/upload-xml" ^
+  -H "X-Api-Key: YOUR_SECRET_TOKEN" ^
+  -F "client=CustomerA" ^
+  -F "file=C:/data/loginstats.xml"
+</text></pre>
+
+<h5>Using PowerShell</h5>
+<pre class="bg-light p-3"><text>
+Invoke-RestMethod -Uri "https://yourserver/api/upload-xml" `
+  -Method Post `
+  -Headers "X-Api-Key" = "YOUR_SECRET_TOKEN"
+  -Form client = "CustomerA"
+        file = Get - Item "C:\data\loginstats.xml"
+</text></pre>
+
+<h5>Using C# (.NET)</h5>
+<pre class="bg-light p-3"><text>
+using var client = new HttpClient();
+client.DefaultRequestHeaders.Add("X-Api-Key", "YOUR_SECRET_TOKEN");
+
+var form = new MultipartFormDataContent();
+form.Add(new StringContent("CustomerA"), "client");
+form.Add(new StreamContent(File.OpenRead("loginstats.xml")), "file", "loginstats.xml");
+
+var response = await client.PostAsync("https://yourserver/api/upload-xml", form);
+Console.WriteLine(await response.Content.ReadAsStringAsync());
+</text></pre>
+
+<hr />
+
+<h3>6. Responses</h3>
+
+<h5>Success (200)</h5>
+<pre class="bg-light p-3"><text>
+{
+    "Successfully uploaded: the 'loginstats.xml' file for customer 'CustomerA'."
+}
+</text></pre>
+
+<h5>Error: Missing Token (401)</h5>
+<pre class="bg-light p-3"><text>
+{
+    "error": "Unauthorized",
+    "message": "Missing or invalid API token"
+}
+</text></pre>
+
+<h5>Error: Bad Request (400)</h5>
+<pre class="bg-light p-3"><text>
+{
+    "error": "BadRequest",
+    "message": "Customer name or file is missing"
+}
+</text></pre>
+
+<hr />
+
+<h3>7. Error Codes</h3>
+
+<table class="table table-bordered w-75">
+    <thead class="table-light">
+        <tr>
+            <th>Code</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>401</td>
+            <td>Unauthorized — Missing or invalid API key</td>
+        </tr>
+        <tr>
+            <td>400</td>
+            <td>Bad Request — Missing parameters or invalid XML</td>
+        </tr>
+        <tr>
+            <td>500</td>
+            <td>Server error during file processing</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr />
+
+<h3>8. Notes</h3>
+<ul>
+    <li>Uploaded files are stored in per-customer directories.</li>
+    <li>Files are processed using the same engine used by manual uploads.</li>
+    <li>XML format must match the GOBENCH LoginStatistics schema.</li>
+    <li>Large files are supported (up to server limits).</li>
+</ul>
+
+<hr />
+
+<p class="text-secondary">
+    For further integration details or advanced API support, contact the system administrator.
+</p>

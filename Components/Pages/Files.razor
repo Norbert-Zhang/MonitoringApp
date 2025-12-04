@@ -1,0 +1,78 @@
+﻿@page "/files"
+@rendermode InteractiveServer
+@inject BlazorWebApp.Services.FileService FileService
+@inject IJSRuntime JS
+
+<h3>Customer Login Statistics XML Files</h3>
+
+@if (files is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>File Name</th>
+                <th>Download</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in files)
+            {
+                <tr>
+                    <td>@f.ClientName</td>
+                    <td>@f.FileName</td>
+                    <td>
+                        <a href="@GetDownloadUrl(f.ClientName, f.FileName)" download>Raw XML File</a> |
+                        <a href="@GetExcelDownloadUrl(f.ClientName, f.FileName)">Convert to Excel</a>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="() => DeleteFile(f.ClientName, f.FileName)">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<(string ClientName, string FileName)> files;
+
+    protected override void OnInitialized()
+    {
+        files = FileService.GetAllFiles();
+    }
+
+    private string GetDownloadUrl(string client, string file)
+    {
+        return $"/download?client={Uri.EscapeDataString(client)}&file={Uri.EscapeDataString(file)}";
+    }
+
+    private string GetExcelDownloadUrl(string client, string file)
+       => $"/download-excel?client={Uri.EscapeDataString(client)}&file={Uri.EscapeDataString(file)}";
+
+    private async Task DeleteFile(string client, string file)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete file '{file}' for customer '{client}'?");
+        if (!confirmed) return;
+
+        bool success = FileService.DeleteFile(client, file);
+        if (success)
+        {
+            files.RemoveAll(f => f.ClientName == client && f.FileName == file);
+            StateHasChanged();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to delete the file.");
+        }
+    }
+
+}

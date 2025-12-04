@@ -1,0 +1,76 @@
+﻿@page "/upload"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Forms
+@inject BlazorWebApp.Services.FileService FileService
+
+<h3>Upload Customer Login Statistics XML File</h3>
+
+<div class="mb-3">
+    <label class="form-label">Customer Name</label>
+    <input class="form-control" @bind="clientName" />
+</div>
+
+<div class="mb-3">
+    <InputFile OnChange="OnFileSelected" accept=".xml" />
+</div>
+
+<button class="btn btn-primary" @onclick="ConfirmUpload" disabled="@(!fileSelected)">
+    Confirm upload
+</button>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p class="mt-3 @(isError ? "text-danger" : "text-success")">@message</p>
+}
+
+@code {
+    private string clientName = "";
+    private string message = "";
+    private bool isError = false;
+    private IBrowserFile? selectedFile = null;
+    private bool fileSelected = false;
+
+    private Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        fileSelected = selectedFile != null;
+
+        if (fileSelected)
+        {
+            message = $"Selected file: {selectedFile.Name}";
+            isError = false;
+        }
+        else
+        {
+            message = "No file was selected.";
+            isError = true;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmUpload()
+    {
+        if (string.IsNullOrWhiteSpace(clientName))
+        {
+            message = "Please fill in the customer's name.";
+            isError = true;
+            return;
+        }
+
+        if (selectedFile == null)
+        {
+            message = "Please select a file first.";
+            isError = true;
+            return;
+        }
+
+        await FileService.SaveClientXmlAsync(clientName, selectedFile);
+
+        message = $"{selectedFile.Name} uploaded successfully!";
+        isError = false;
+
+        selectedFile = null;
+        fileSelected = false;
+    }
+}

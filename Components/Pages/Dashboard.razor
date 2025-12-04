@@ -1,0 +1,115 @@
+﻿@page "/dashboard"
+@rendermode InteractiveServer
+@using System.Globalization
+@using Microsoft.JSInterop
+
+<h3>Customer Login Statistics Dashboard</h3>
+
+<div class="mb-3 mt-3">
+    <label>Display mode: </label>
+    <select class="form-select w-auto d-inline-block"
+            value="@mode"
+            @onchange="OnModeChange">
+        <option value="year">By Year</option>
+        <option value="month">By Month</option>
+    </select>
+    <button class="btn btn-primary mx-2" @onclick="ExportChart">
+        Export as PNG
+    </button>
+</div>
+
+<canvas id="loginChart" width="800" height="400"></canvas>
+
+@code {
+    private string mode = "year";
+    private Dictionary<string, List<(DateOnly Date, int Count, string Level)>>? data;
+
+    [Inject] BlazorWebApp.Services.XmlStatisticsService StatsService { get; set; } = default!;
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        data = StatsService.LoadStatistics();
+    }
+
+    private async Task ExportChart()
+    {
+        await JS.InvokeVoidAsync("dashboardChart.exportChart", "loginChart");
+    }
+
+    private async Task OnModeChange(ChangeEventArgs e)
+    {
+        mode = e.Value!.ToString()!;
+        await DrawChart();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await DrawChart();
+        }
+    }
+
+    private async Task DrawChart()
+    {
+        if (data == null)
+            return;
+
+        var labels = GetLabels();
+        var datasets = GetDatasets(labels);
+
+        await JS.InvokeVoidAsync(
+            "dashboardChart.renderLineChart",
+            "loginChart",
+            labels,
+            datasets
+        );
+    }
+
+    // ------------------
+    // Generate X-axis by year/month
+    // ------------------
+    private List<string> GetLabels()
+    {
+        var all = data!.SelectMany(x => x.Value).ToList();
+
+        if (mode == "year")
+        {
+            return all.Where(x => x.Level == "YearStatistics")
+                .Select(x => x.Date.Year.ToString())
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+        }
+        else // month
+        {
+            return all.Where(x => x.Level == "MonthStatistics")
+                .Select(x => $"{x.Date.Year}-{x.Date.Month:00}")
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+        }
+    }
+
+    // ------------------
+    // Generate chart data
+    // ------------------
+    private List<object> GetDatasets(List<string> labels)
+    {
+        return data!.Select(client =>
+            new
+            {
+                label = client.Key,
+                data = labels.Select(label =>
+                {
+                    var matches = client.Value.Where(v =>
+                        mode == "year" ? v.Level == "YearStatistics" && v.Date.Year.ToString() == label : v.Level == "MonthStatistics" && $"{v.Date.Year}-{v.Date.Month:00}" == label
+                    );
+
+                    return matches.Sum(x => x.Count);
+                }).ToList()
+            }
+        ).Cast<object>().ToList();
+    }
+}
