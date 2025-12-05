@@ -1,76 +1,106 @@
 ﻿@page "/upload"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components.Forms
 @inject BlazorWebApp.Services.FileService FileService
+@using Microsoft.AspNetCore.Components.Forms
 
 <h3>Upload Customer Login Statistics XML File</h3>
 
 <div class="mb-3">
     <label class="form-label">Customer Name</label>
-    <input class="form-control" @bind="clientName" />
+
+    <select class="form-select w-auto d-inline-block"
+    @onchange="OnClientChange">
+
+        <option value="">-- Select customer --</option>
+
+        @foreach (var c in existingClients)
+        {
+            if (!string.IsNullOrEmpty(c))
+            {
+                <option value="@c">@c</option>
+            }
+        }
+
+        <option value="__new__">+ New customer...</option>
+    </select>
+
+    @if (isNewClient)
+    {
+        <input class="form-control mt-2 w-auto"
+        placeholder="Enter new customer name"
+        @bind="newClientName" />
+    }
 </div>
 
 <div class="mb-3">
+    <label class="form-label">Upload XML File</label>
     <InputFile OnChange="OnFileSelected" accept=".xml" />
 </div>
 
-<button class="btn btn-primary" @onclick="ConfirmUpload" disabled="@(!fileSelected)">
-    Confirm upload
+<button class="btn btn-primary"
+disabled="@(!canUpload)"
+@onclick="UploadConfirm">
+    Upload
 </button>
 
-@if (!string.IsNullOrWhiteSpace(message))
+@if (!string.IsNullOrEmpty(message))
 {
-    <p class="mt-3 @(isError ? "text-danger" : "text-success")">@message</p>
+    <div class="alert alert-info mt-3">@message</div>
 }
 
 @code {
-    private string clientName = "";
+
+    private List<string?> existingClients = new();
+    private string selectedClient = "";
+    private bool isNewClient = false;
+    private string newClientName = "";
+    private IBrowserFile? uploadedFile;
     private string message = "";
-    private bool isError = false;
-    private IBrowserFile? selectedFile = null;
-    private bool fileSelected = false;
 
-    private Task OnFileSelected(InputFileChangeEventArgs e)
+    private bool canUpload =>
+        uploadedFile != null &&
+        (!string.IsNullOrWhiteSpace(selectedClient) ||
+         !string.IsNullOrWhiteSpace(newClientName));
+
+    protected override void OnInitialized()
     {
-        selectedFile = e.File;
-        fileSelected = selectedFile != null;
-
-        if (fileSelected)
-        {
-            message = $"Selected file: {selectedFile.Name}";
-            isError = false;
-        }
-        else
-        {
-            message = "No file was selected.";
-            isError = true;
-        }
-
-        return Task.CompletedTask;
+        existingClients = FileService.GetExistingClients();
     }
 
-    private async Task ConfirmUpload()
+    private void OnClientChange(ChangeEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(clientName))
+        selectedClient = e.Value?.ToString() ?? "";
+        isNewClient = selectedClient == "__new__";
+
+        if (!isNewClient)
+            newClientName = "";
+    }
+
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadedFile = e.File;
+    }
+
+    private async Task UploadConfirm()
+    {
+        string finalCustomerName = isNewClient ? newClientName : selectedClient;
+        finalCustomerName = finalCustomerName.Trim();
+        if (string.IsNullOrWhiteSpace(finalCustomerName))
         {
-            message = "Please fill in the customer's name.";
-            isError = true;
+            message = "Customer name is required.";
+            return;
+        }
+        if (uploadedFile == null)
+        {
+            message = "Please select an XML file.";
             return;
         }
 
-        if (selectedFile == null)
-        {
-            message = "Please select a file first.";
-            isError = true;
-            return;
-        }
+        await FileService.SaveClientXmlAsync(finalCustomerName, uploadedFile);
 
-        await FileService.SaveClientXmlAsync(clientName, selectedFile);
-
-        message = $"{selectedFile.Name} uploaded successfully!";
-        isError = false;
-
-        selectedFile = null;
-        fileSelected = false;
+        message = $"{uploadedFile.Name} uploaded successfully!";
+        // refresh client list if new one was added
+        existingClients = FileService.GetExistingClients();
     }
 }

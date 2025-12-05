@@ -13,6 +13,17 @@ namespace BlazorWebApp.Services
             Directory.CreateDirectory(_basePath);
         }
 
+        public List<string?> GetExistingClients()
+        {
+            if (!Directory.Exists(_basePath))
+                return new List<string?>();
+
+            return Directory.GetDirectories(_basePath)
+                            .Select(Path.GetFileName)
+                            .OrderBy(x => x)
+                            .ToList();
+        }
+
         public async Task SaveClientXmlAsync(string clientName, IBrowserFile file)
         {
             string clientDir = Path.Combine(_basePath, clientName);
