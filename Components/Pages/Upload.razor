@@ -5,32 +5,30 @@
 
 <h3>Upload Customer Login Statistics XML File</h3>
 
-<div class="mb-3">
-    <label class="form-label">Customer Name</label>
-
-    <select class="form-select w-auto d-inline-block"
-    @onchange="OnClientChange">
-
-        <option value="">-- Select customer --</option>
-
-        @foreach (var c in existingClients)
-        {
-            if (!string.IsNullOrEmpty(c))
+<div class="row g-3">
+    <div class="col-auto">
+        <label class="form-label">Choose existing customer</label>
+        <select class="form-select"
+        @onchange="OnClientSelected"
+        value="@selectedClient">
+            <option value="">-- Select customer --</option>
+            @foreach (var c in existingClients)
             {
                 <option value="@c">@c</option>
             }
-        }
-
-        <option value="__new__">+ New customer...</option>
-    </select>
-
-    @if (isNewClient)
-    {
-        <input class="form-control mt-2 w-auto"
-        placeholder="Enter new customer name"
-        @bind="newClientName" />
-    }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Or enter new customer</label>
+        <input class="form-control"
+        placeholder="New customer name"
+        @bind="newClientName"
+        @oninput="OnNewClientTyping"
+        disabled="@isExistingClientSelected" />
+    </div>
 </div>
+
+<hr />
 
 <div class="mb-3">
     <label class="form-label">Upload XML File</label>
@@ -50,10 +48,11 @@ disabled="@(!canUpload)"
 
 @code {
 
-    private List<string?> existingClients = new();
+    private List<string?> existingClients = [];
     private string selectedClient = "";
-    private bool isNewClient = false;
     private string newClientName = "";
+    private bool isExistingClientSelected = false;
+
     private IBrowserFile? uploadedFile;
     private string message = "";
 
@@ -67,25 +66,47 @@ disabled="@(!canUpload)"
         existingClients = FileService.GetExistingClients();
     }
 
-    private void OnClientChange(ChangeEventArgs e)
+    // When dropdown changes
+    private void OnClientSelected(ChangeEventArgs e)
     {
         selectedClient = e.Value?.ToString() ?? "";
-        isNewClient = selectedClient == "__new__";
-
-        if (!isNewClient)
+        if (!string.IsNullOrWhiteSpace(selectedClient))
+        {
+            // Existing customer selected → disable input
+            isExistingClientSelected = true;
             newClientName = "";
+        }
+        else
+        {
+            isExistingClientSelected = false;
+        }
+        message = "";
     }
 
+    // When typing in new customer name
+    private void OnNewClientTyping(ChangeEventArgs e)
+    {
+        newClientName = e.Value?.ToString() ?? "";
+        if (!string.IsNullOrWhiteSpace(newClientName))
+        {
+            // user is typing a new name → dropdown reset
+            selectedClient = "";
+            isExistingClientSelected = false;
+        }
+        message = "";
+    }
 
     private void OnFileSelected(InputFileChangeEventArgs e)
     {
         uploadedFile = e.File;
+        message = "";
     }
 
     private async Task UploadConfirm()
     {
-        string finalCustomerName = isNewClient ? newClientName : selectedClient;
+        string finalCustomerName = !string.IsNullOrWhiteSpace(newClientName) ? newClientName : selectedClient;
         finalCustomerName = finalCustomerName.Trim();
+
         if (string.IsNullOrWhiteSpace(finalCustomerName))
         {
             message = "Customer name is required.";
