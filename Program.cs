@@ -46,7 +46,8 @@ app.MapRazorComponents<App>()
 app.MapPost("/api/upload-xml", async (
     HttpRequest request,
     IWebHostEnvironment env,
-    IConfiguration config) =>
+    IConfiguration config,
+    BlazorWebApp.Services.FileService fileService) =>
 {
     var token = request.Headers["x-api-key"].ToString();
     var expectedToken = config["ApiSettings:UploadApiToken"];
@@ -70,11 +71,13 @@ app.MapPost("/api/upload-xml", async (
     if (!file.FileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
         return Results.BadRequest("Only XML files are allowed.");
 
+    // CALL BACKUP BEFORE SAVING NEW FILE
+    fileService.BackupFileFromDir(client);
+
+    // Now safe to write new file
     var clientDir = Path.Combine(env.ContentRootPath, "Uploads", client);
     Directory.CreateDirectory(clientDir);
-
     var savePath = Path.Combine(clientDir, file.FileName);
-
     using var fs = new FileStream(savePath, FileMode.Create);
     await file.CopyToAsync(fs);
 
