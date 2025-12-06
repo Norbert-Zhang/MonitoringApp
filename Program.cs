@@ -1,10 +1,7 @@
 using BlazorWebApp.Components;
+using BlazorWebApp.Helpers;
 using BlazorWebApp.Services;
-
 using System.Xml.Linq;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -96,96 +93,52 @@ app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
     return Results.File(bytes, "application/xml", file);
 });
 
-static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
+static List<List<string>> BuildTotalStatsSheet(XDocument xdoc)
 {
-    var sheetData = new SheetData();
-    foreach (var r in rows)
-    {
-        var row = new Row();
-        foreach (var c in r)
-        {
-            row.Append(new Cell { CellValue = new CellValue(c), DataType = CellValues.String });
-        }
-        sheetData.Append(row);
-    }
-    ws.Worksheet = new Worksheet(sheetData);
-}
+    var root = xdoc.Root!;
+    var login = root.Element("LoginStatistics")!;
+    var total = login.Element("TotalStatistics")!;
 
-//Excel-File download API
-app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
-{
-    var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
-    if (!System.IO.File.Exists(xmlPath))
-        return Results.NotFound();
-
-    var xdoc = XDocument.Load(xmlPath);
-
-    using var mem = new MemoryStream();
-    using (var doc = SpreadsheetDocument.Create(mem, SpreadsheetDocumentType.Workbook))
-    {
-        var wb = doc.AddWorkbookPart();
-        wb.Workbook = new Workbook();
-        var sheets = wb.Workbook.AppendChild(new Sheets());
-
-        // --------------------
-        // Sheet 1: Total Stats
-        // --------------------
-        var root = xdoc.Root!;
-        var login = root.Element("LoginStatistics")!;
-        var total = login.Element("TotalStatistics")!;
-
-        var ws1 = wb.AddNewPart<WorksheetPart>();
-
-        var totalRows = new List<List<string>>
+    var totalRows = new List<List<string>>
         {
             new() { "Field", "Value" },
             new() { "SystemName", (string)root.Attribute("SystemName")! },
-            new() { "SystemVersion", (string)root.Attribute("SystemVersion")! },
+            new() { "SystemVersion", "v_" + (string)root.Attribute("SystemVersion")! },
             new() { "StartDate", (string)login.Attribute("StartDate")! },
             new() { "TotalLoginCount", (string)total.Attribute("Count")! },
             new() { "", "" },
             // User statistics table
             new() { "UserID", "Count" }
         };
-        // add user info rows
-        totalRows.AddRange(
-            total.Element("Users")?.Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
-            .Select(u => new List<string>
-            {
+    // add user info rows
+    totalRows.AddRange(
+        total.Element("Users")?.Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
+        .Select(u => new List<string>
+        {
                 (string)u.Attribute("ID")!,
                 (string)u.Attribute("Count")!
-            }) ?? Enumerable.Empty<List<string>>()
-        );
-        totalRows.Add(new List<string> { "", "" });
-        // UserGroup statistics header
-        totalRows.Add(new List<string> { "UserGroupID", "Count" });
-        // add user group rows
-        totalRows.AddRange(
-            total.Element("UserGroups")?
-            .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserGroupInfo")
-            .Select(g => new List<string>
-            {
+        }) ?? Enumerable.Empty<List<string>>()
+    );
+    totalRows.Add(new List<string> { "", "" });
+    // UserGroup statistics header
+    totalRows.Add(new List<string> { "UserGroupID", "Count" });
+    // add user group rows
+    totalRows.AddRange(
+        total.Element("UserGroups")?
+        .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserGroupInfo")
+        .Select(g => new List<string>
+        {
                 (string)g.Attribute("ID")!,
                 (string)g.Attribute("Count")!
-            }) ?? Enumerable.Empty<List<string>>()
-        );
+        }) ?? Enumerable.Empty<List<string>>()
+    );
 
-        WriteSheet(ws1, totalRows);
+    return totalRows;
+}
 
-        sheets.Append(new Sheet
-        {
-            Id = wb.GetIdOfPart(ws1),
-            SheetId = 1,
-            Name = "TotalStats"
-        });
-
-        // --------------------
-        // Sheet 2: Users Hierarchy
-        // --------------------
-        var entries = XmlStatisticsHelper.ParseStatistics(total);
-
-        var ws2 = wb.AddNewPart<WorksheetPart>();
-        WriteSheet(ws2, new List<List<string>>
+static List<List<string>> BuildUserSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+{
+    var userRows = new List<List<string>>
         {
             new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserID","Count" }
         }.Concat(
@@ -203,20 +156,13 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
                     e.Id,
                     e.Count.ToString()
                 })
-        ).ToList());
+        ).ToList();
+    return userRows;
+}
 
-        sheets.Append(new Sheet
-        {
-            Id = wb.GetIdOfPart(ws2),
-            SheetId = 2,
-            Name = "UserHierarchy"
-        });
-
-        // --------------------
-        // Sheet 3: Groups Hierarchy
-        // --------------------
-        var ws3 = wb.AddNewPart<WorksheetPart>();
-        WriteSheet(ws3, new List<List<string>>
+static List<List<string>> BuildUserGroupSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+{
+    var userGroupRows = new List<List<string>>
         {
             new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserGroupID","Count" }
         }.Concat(
@@ -234,20 +180,13 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
                     e.Id,
                     e.Count.ToString()
                 })
-        ).ToList());
+        ).ToList();
+    return userGroupRows;
+}
 
-        sheets.Append(new Sheet
-        {
-            Id = wb.GetIdOfPart(ws3),
-            SheetId = 3,
-            Name = "UserGroupHierarchy"
-        });
-
-        // --------------------
-        // Sheet 4: Stats Hierarchy
-        // --------------------
-        var ws4 = wb.AddNewPart<WorksheetPart>();
-        WriteSheet(ws4, new List<List<string>>
+static List<List<string>> BuildStatsSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+{
+    var statsRows = new List<List<string>>
         {
             new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","Count" }
         }.Concat(
@@ -264,25 +203,35 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
                     e.Day?.ToString() ?? "",
                     e.Count.ToString()
                 })
-        ).ToList());
+        ).ToList();
+    return statsRows;
+}
 
-        sheets.Append(new Sheet
-        {
-            Id = wb.GetIdOfPart(ws4),
-            SheetId = 4,
-            Name = "StatsHierarchy"
-        });
+//Excel-File download API
+app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
+{
+    var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
+    if (!System.IO.File.Exists(xmlPath))
+        return Results.NotFound();
 
-        wb.Workbook.Save();
-    }
+    var xdoc = XDocument.Load(xmlPath);
+    var entries = XmlStatisticsHelper.ParseStatistics(xdoc.Root!.Element("LoginStatistics")!.Element("TotalStatistics")!);
+    // prepare sheet data (your existing logic)
+    var dataSheets = new Dictionary<string, List<List<string>>>
+    {
+        ["TotalStats"] = BuildTotalStatsSheet(xdoc),
+        ["UserHierarchy"] = BuildUserSheet(xdoc, entries),
+        ["UserGroupHierarchy"] = BuildUserGroupSheet(xdoc, entries),
+        ["StatsHierarchy"] = BuildStatsSheet(xdoc, entries)
+    };
 
-    mem.Position = 0;
-    var excelName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
-
+    // generate excel
+    var excelBytes = ExcelExportHelper.CreateExcel(dataSheets);
+    var excelFileName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
     return Results.File(
-        mem.ToArray(),
+        excelBytes,
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        excelName
+        excelFileName
     );
 });
 
