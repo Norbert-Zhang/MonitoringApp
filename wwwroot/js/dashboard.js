@@ -64,11 +64,11 @@
             console.error("Canvas not found:", canvasId);
             return;
         }
-
+        const margin = 20;
         // Create a temporary canvas (with a background color)
         const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        tempCanvas.width = canvas.width + margin * 2;
+        tempCanvas.height = canvas.height + margin * 2;
 
         const ctx = tempCanvas.getContext("2d");
 
@@ -77,7 +77,7 @@
         ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
         // 2. Copy the original image to a new canvas
-        ctx.drawImage(canvas, 0, 0);
+        ctx.drawImage(canvas, margin, margin);
 
         // 3. Export PNG (background color is now consistent)
         const imageURL = tempCanvas.toDataURL("image/png");
