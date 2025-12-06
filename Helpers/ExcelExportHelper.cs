@@ -32,6 +32,11 @@ namespace BlazorWebApp.Helpers
                     var wsPart = wb.AddNewPart<WorksheetPart>();
                     WriteSheet(wsPart, sheet.Value);
 
+                    int columnCount = sheet.Value.First().Count;
+                    // FREEZE header row
+                    FreezeHeaderRow(wsPart);
+                    // Using the header row as filter range.
+                    AddAutoFilter(wsPart, columnCount);
                     sheets.Append(new Sheet
                     {
                         Id = wb.GetIdOfPart(wsPart),
@@ -49,7 +54,7 @@ namespace BlazorWebApp.Helpers
         // ---------------------------
         // Private: Write One Sheet
         // ---------------------------
-        private static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
+        public static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
         {
             var sheetData = new SheetData();
 
@@ -138,6 +143,87 @@ namespace BlazorWebApp.Helpers
                 CellValue = new CellValue(number.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                 StyleIndex = 2 // body style
             };
+        }
+
+        /// <summary>
+        /// Freeze the first row (row 1).
+        /// </summary>
+        public static void FreezeHeaderRow(WorksheetPart wsPart)
+        {
+            var worksheet = wsPart.Worksheet;
+
+            var sheetViews = worksheet.Elements<SheetViews>().FirstOrDefault();
+            if (sheetViews == null)
+            {
+                sheetViews = new SheetViews();
+                worksheet.InsertAt(sheetViews, 0);
+            }
+
+            var sheetView = sheetViews.Elements<SheetView>().FirstOrDefault();
+            if (sheetView == null)
+            {
+                sheetView = new SheetView() { WorkbookViewId = 0 };
+                sheetViews.Append(sheetView);
+            }
+
+            // Freeze top row (row 1 → split at row 2)
+            sheetView.Append(
+                new Pane
+                {
+                    VerticalSplit = 1D,
+                    TopLeftCell = "A2",
+                    ActivePane = PaneValues.BottomLeft,
+                    State = PaneStateValues.Frozen
+                }
+            );
+
+            // Optional: show row 1 in top pane
+            sheetView.Append(
+                new Selection
+                {
+                    Pane = PaneValues.BottomLeft,
+                    ActiveCell = "A2",
+                    SequenceOfReferences = new ListValue<StringValue>() { InnerText = "A2" }
+                }
+            );
+        }
+
+        /// <summary>
+        /// Adds AutoFilter to the worksheet, using the header row as filter range.
+        /// Range example: A1:D1 (auto-detected based on column count)
+        /// </summary>
+        public static void AddAutoFilter(WorksheetPart wsPart, int columnCount)
+        {
+            if (columnCount <= 0)
+                return;
+
+            var worksheet = wsPart.Worksheet;
+
+            // Compute Excel column letter (A, B, ..., AA, AB, ...)
+            string lastColumn = ToExcelColumnName(columnCount);
+
+            string filterRange = $"A1:{lastColumn}1";
+
+            var autoFilter = new AutoFilter { Reference = filterRange };
+
+            // Remove existing AutoFilter if present
+            worksheet.RemoveAllChildren<AutoFilter>();
+            worksheet.Append(autoFilter);
+        }
+
+        /// <summary>
+        /// Converts 1 -> A, 2 -> B ... 26 -> Z, 27 -> AA, 28 -> AB ...
+        /// </summary>
+        private static string ToExcelColumnName(int col)
+        {
+            string name = "";
+            while (col > 0)
+            {
+                col--;
+                name = (char)('A' + (col % 26)) + name;
+                col /= 26;
+            }
+            return name;
         }
 
         // ---------------------------

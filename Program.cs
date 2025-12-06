@@ -102,13 +102,13 @@ static List<List<string>> BuildTotalStatsSheet(XDocument xdoc)
     var totalRows = new List<List<string>>
         {
             new() { "Field", "Value" },
-            new() { "SystemName", (string)root.Attribute("SystemName")! },
-            new() { "SystemVersion", "v_" + (string)root.Attribute("SystemVersion")! },
-            new() { "StartDate", (string)login.Attribute("StartDate")! },
-            new() { "TotalLoginCount", (string)total.Attribute("Count")! },
+            new() { "System Name", (string)root.Attribute("SystemName")! },
+            new() { "System Version", "v_" + (string)root.Attribute("SystemVersion")! },
+            new() { "Start Date", (string)login.Attribute("StartDate")! },
+            new() { "Total Login Count", (string)total.Attribute("Count")! },
             new() { "", "" },
             // User statistics table
-            new() { "UserID", "Count" }
+            new() { "User ID", "Total Login Count" }
         };
     // add user info rows
     totalRows.AddRange(
@@ -121,7 +121,7 @@ static List<List<string>> BuildTotalStatsSheet(XDocument xdoc)
     );
     totalRows.Add(new List<string> { "", "" });
     // UserGroup statistics header
-    totalRows.Add(new List<string> { "UserGroupID", "Count" });
+    totalRows.Add(new List<string> { "User Group ID", "Total Login Count" });
     // add user group rows
     totalRows.AddRange(
         total.Element("UserGroups")?
@@ -140,7 +140,7 @@ static List<List<string>> BuildUserSheet(XDocument xdoc, List<XmlNodeEntry> entr
 {
     var userRows = new List<List<string>>
         {
-            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserID","Count" }
+            new() { "Level","Year","Half Year","Quarter","Month","Week","Day","User ID", "Login Count" }
         }.Concat(
             entries
                 .Where(e => e.Target == "User") // users
@@ -164,7 +164,7 @@ static List<List<string>> BuildUserGroupSheet(XDocument xdoc, List<XmlNodeEntry>
 {
     var userGroupRows = new List<List<string>>
         {
-            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","UserGroupID","Count" }
+            new() { "Level","Year","Half Year","Quarter","Month","Week","Day","User Group ID", "Login Count" }
         }.Concat(
             entries
                 .Where(e => e.Target == "UserGroup") // groups
@@ -188,7 +188,7 @@ static List<List<string>> BuildStatsSheet(XDocument xdoc, List<XmlNodeEntry> ent
 {
     var statsRows = new List<List<string>>
         {
-            new() { "Level","Year","HalfYear","Quarter","Month","Week","Day","Count" }
+            new() { "Level","Year","Half Year","Quarter","Month","Week","Day", "Login Count" }
         }.Concat(
             entries
                 .Where(e => e.Target == "Stats") // Stats
