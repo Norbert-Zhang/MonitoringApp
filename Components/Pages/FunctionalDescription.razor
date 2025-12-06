@@ -3,102 +3,141 @@
 
 <PageTitle>System Overview</PageTitle>
 
-<h2>Welcome to the Customer Login Statistics Web App</h2>
+<h2>Welcome to the Customer Login Statistics Web Application</h2>
 <p class="text-secondary">
-    This application provides a centralized solution for collecting, importing, analyzing, and visualizing
-    login statistics for multiple customers of the GOBENCH system.
-    It supports XML uploads, automated API imports, interactive dashboards, and Excel export capabilities.
+    This system provides a complete solution for collecting, managing, analyzing, and visualizing
+    login statistics from multiple GOBENCH customers.
+    It supports manual and automated XML uploads, interactive dashboards, Excel exports,
+    activity overview widgets, and a fully documented REST API.
 </p>
 
 <hr />
 
-<h4>Main Features</h4>
+<h3>Main Features</h3>
 
 <ul class="list-group mb-4">
+
+    <!-- Upload -->
     <li class="list-group-item">
         <strong>1. Upload Page</strong><br />
-        Upload XML files containing login statistics for each customer.
-        Files are automatically validated and stored in separate folders based on customer name.
+        Upload XML login statistics to specific customer folders.<br />
+        Features:
+        <ul>
+            <li>Select customer from dropdown or create a new customer name</li>
+            <li>Automatic backup of existing files before uploading new ones</li>
+            <li>File validation (XML only)</li>
+            <li>Safe storage into structured customer directories</li>
+        </ul>
     </li>
+
+    <!-- Files -->
     <li class="list-group-item">
         <strong>2. Files Page</strong><br />
-        View all uploaded XML files grouped by customer.<br />
-        Functions include:
+        View and manage all uploaded XML files grouped by customer.<br />
+        Functions:
         <ul>
-            <li>Download XML files directly</li>
-            <li>Convert XML into Excel (XLSX) and download</li>
-            <li>Delete XML files directly</li>
+            <li>Download raw XML files</li>
+            <li>Download Excel-converted files</li>
+            <li>Delete XML files</li>
         </ul>
     </li>
+
+    <!-- Dashboard -->
     <li class="list-group-item">
         <strong>3. Dashboard</strong><br />
-        Interactive chart displaying login statistics over time.<br />
-        Features include:
+        A fully interactive chart-based dashboard visualizing login statistics.<br />
+        Features:
         <ul>
-            <li>Display login trends by Year or by Month</li>
-            <li>Support multiple customers at the same time</li>
-            <li>Smooth interactive switching without page reload</li>
-            <li>Export chart as PNG image</li>
+            <li>Time filtering via <b>From</b> and <b>To</b> date selectors</li>
+            <li>Switch between <b>Year view</b> and <b>Month view</b></li>
+            <li>Chart type selection: <b>Bar chart</b> or <b>Line chart</b></li>
+            <li>Export chart as PNG</li>
+            <li>Supports multiple customers at once</li>
         </ul>
     </li>
+
+    <!-- REST API -->
     <li class="list-group-item">
-        <strong>4. REST API for Automated Upload</strong><br />
-        Instead of manual file upload, XML files can be uploaded by automated systems via secure API.<br />
-        Features include:
+        <strong>4. REST API for Automated Uploads</strong><br />
+        Systems can upload XML data programmatically.<br />
+        Features:
         <ul>
-            <li>POST endpoint for XML upload</li>
-            <li>API Token authentication</li>
-            <li>Automatic storage in customer folder</li>
-            <li>Full compatibility with Upload.razor</li>
+            <li>POST endpoint for uploading statistics</li>
+            <li>API Key authentication</li>
+            <li>Direct integration with server storage</li>
+            <li>Full compatibility with the manual Upload workflow</li>
+        </ul>
+    </li>
+
+    <!-- Home Dashboard -->
+    <li class="list-group-item">
+        <strong>5. Home Overview Dashboard</strong><br />
+        A visual summary of system activity.<br />
+        Widgets include:
+        <ul>
+            <li><b>Recent 5 Uploads</b> list</li>
         </ul>
     </li>
 </ul>
 
 <hr />
 
-<h4>Technical Features</h4>
+<h3>Technical Features</h3>
+
 <ul class="list-group mb-4">
+
+    <!-- XML Parsing -->
     <li class="list-group-item">
         <strong>XML Parsing Engine</strong><br />
-        Fully recursive XML parser that extracts:
+        Fully recursive XML parser extracting:
         <ul>
-            <li>Year, HalfYear, Quarter, Month, Week, Day</li>
-            <li>User and UserGroup statistics</li>
-            <li>Nested LoginStatistics (recursive structure)</li>
+            <li>Year / Half-Year / Quarter / Month / Week / Day levels</li>
+            <li>User and UserGroup login counts</li>
+            <li>Nested hierarchical statistics</li>
         </ul>
     </li>
+
+    <!-- Excel Export -->
     <li class="list-group-item">
-        <strong>Excel Export</strong><br />
-        XML files can be converted into:
+        <strong>Advanced Excel Export</strong><br />
+        XML files can be converted into a multi-sheet XLSX file with:
         <ul>
-            <li>Total statistics sheet (Users + UserGroups)</li>
-            <li>Hierarchical breakdown sheet</li>
-            <li>Formatted according to data structure</li>
+            <li>Formatted Total Statistics sheet</li>
+            <li>User hierarchy sheet</li>
+            <li>UserGroup hierarchy sheet</li>
+            <li>Stats hierarchy sheet</li>
+            <li><b>Numeric columns exported as true Number type</b></li>
+            <li><b>AutoFilter enabled on every sheet</b></li>
+            <li><b>Freeze Panes enabled (first row locked)</b></li>
         </ul>
     </li>
+
+    <!-- Chart Rendering -->
     <li class="list-group-item">
-        <strong>Chart Rendering</strong><br />
-        The Dashboard is powered by Chart.js with:
+        <strong>Chart Rendering Technology</strong><br />
+        Dashboard charts powered by Chart.js with:
         <ul>
-            <li>Dynamic dataset generation</li>
-            <li>Colors per customer</li>
-            <li>Canvas-safe rendering with automatic destroy()</li>
+            <li>Dynamic datasets per customer</li>
+            <li>Color auto-assignment</li>
+            <li>PNG export with spacing and clean layout</li>
         </ul>
     </li>
 </ul>
 
 <hr />
 
-<h4>How to Use the Application</h4>
+<h3>How to Use the Application</h3>
 <ol class="mb-4">
-    <li>Go to <strong>Upload</strong> to upload XML files for each customer.</li>
-    <li>Check or delete uploaded files anytime on the <strong>Files</strong> page.</li>
-    <li>Use <strong>Dashboard</strong> to view login trends.</li>
-    <li>Integrate with your systems via the <strong>REST API</strong>.</li>
+    <li>Upload XML files via the <strong>Upload</strong> page.</li>
+    <li>Manage, download, or delete files in <strong>Files</strong>.</li>
+    <li>Visualize login stats using <strong>Dashboard</strong>.</li>
+    <li>Automate uploads using the <strong>REST API</strong>.</li>
+    <li>Check system activity on the <strong>Home</strong> page.</li>
 </ol>
 
 <hr />
 
 <p class="text-secondary">
-    If you encounter any issues or need enhancements, please contact the system administrator.
+    If you need new features, chart types, Excel formats, API extensions, or performance improvements,
+    please contact the system administrator.
 </p>
