@@ -1,4 +1,5 @@
 ﻿using System.Xml.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BlazorWebApp.Services;
 
@@ -34,9 +35,16 @@ public class XmlStatisticsService
                 {
                     if (entry.Target == "Stats")
                     {
-                        if (entry.Level == "YearStatistics" || entry.Level == "MonthStatistics")
+                        if (entry.Level == "YearStatistics")
                         {
-                            var dateOnly = new DateOnly(entry.Year ?? 0, entry.Month ?? 1, entry.Day ?? 1);
+                            var dateOnly = new DateOnly(entry.Year ?? 1900, 12, 31);
+                            list.Add((dateOnly, entry.Count, entry.Level));
+                        } else if (entry.Level == "MonthStatistics")
+                        {
+                            int year = entry.Year ?? 1900;
+                            int month = entry.Month ?? 1;
+                            int lastDay = DateTime.DaysInMonth(year, month);
+                            var dateOnly = new DateOnly(year, month, lastDay);
                             list.Add((dateOnly, entry.Count, entry.Level));
                         }
                     }
