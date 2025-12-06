@@ -1,105 +1,173 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@inject BlazorWebApp.Services.FileService FileService
+@inject IWebHostEnvironment Env
 
 <PageTitle>Home</PageTitle>
 
-<h2>Welcome to the Customer Login Statistics Web App</h2>
-<p class="text-secondary">
-    This application provides a centralized solution for collecting, importing, analyzing, and visualizing
-    login statistics for multiple customers of the GOBENCH system.
-    It supports XML uploads, automated API imports, interactive dashboards, and Excel export capabilities.
-</p>
+<h3 class="mb-4">Monitoring App</h3>
 
-<hr />
+<!-- ===== Feature Cards ===== -->
+<div class="container mb-4">
+    <div class="row g-4">
 
-<h4>Main Features</h4>
+        <!-- Dashboard -->
+        <div class="col-md-4">
+            <div class="card shadow-sm home-card text-center">
+                <div class="card-body">
+                    <div class="home-icon bg-primary text-white mb-3">
+                        <i class="bi bi-bar-chart-line"></i>
+                    </div>
+                    <h5 class="card-title">Dashboard</h5>
+                    <p class="card-text">View login trend charts for all customers, with support for filtering and chart downloading.</p>
+                    <NavLink href="dashboard" class="btn btn-primary w-100">Enter Dashboard</NavLink>
+                </div>
+            </div>
+        </div>
 
-<ul class="list-group mb-4">
-    <li class="list-group-item">
-        <strong>1. Upload Page</strong><br />
-        Upload XML files containing login statistics for each customer.
-        Files are automatically validated and stored in separate folders based on customer name.
-    </li>
-    <li class="list-group-item">
-        <strong>2. Files Page</strong><br />
-        View all uploaded XML files grouped by customer.<br />
-        Functions include:
-        <ul>
-            <li>Download XML files directly</li>
-            <li>Convert XML into Excel (XLSX) and download</li>
-            <li>Delete XML files directly</li>
+        <!-- Files List -->
+        <div class="col-md-4">
+            <div class="card shadow-sm home-card text-center">
+                <div class="card-body">
+                    <div class="home-icon bg-success text-white mb-3">
+                        <i class="bi bi-folder2-open"></i>
+                    </div>
+                    <h5 class="card-title">Files List</h5>
+                    <p class="card-text">View all uploaded customer login statistics XML files and convert them to Excel files for download.</p>
+                    <NavLink href="files" class="btn btn-success w-100">View Files List</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload -->
+        <div class="col-md-4">
+            <div class="card shadow-sm home-card text-center">
+                <div class="card-body">
+                    <div class="home-icon bg-warning text-white mb-3">
+                        <i class="bi bi-cloud-upload-fill"></i>
+                    </div>
+                    <h5 class="card-title">Upload XML</h5>
+                    <p class="card-text">Upload the new customer login statistics XML file and update the system automatically.</p>
+                    <NavLink href="upload" class="btn btn-warning text-white w-100">Upload File</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Docs -->
+        <div class="col-md-4">
+            <div class="card shadow-sm home-card text-center">
+                <div class="card-body">
+                    <div class="home-icon bg-info text-white mb-3">
+                        <i class="bi bi-code"></i>
+                    </div>
+                    <h5 class="card-title">API Documentation</h5>
+                    <p class="card-text">View the API documentation and examples for automatic customer login statistics file upload.</p>
+                    <NavLink href="api-docs" class="btn btn-info w-100">View API documentation</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm home-card text-center">
+                <div class="card-body">
+                    <div class="home-icon bg-secondary text-white mb-3">
+                        <i class="bi bi-gear-fill"></i>
+                    </div>
+                    <h5 class="card-title">System Overview</h5>
+                    <p class="card-text">View system function overview, functional description and technical features.</p>
+                    <NavLink href="system-info" class="btn btn-secondary w-100">View System Overview</NavLink>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== Recent Uploads ===== -->
+<div class="container mb-4">
+    <h5 class="mb-3">Recent Uploads</h5>
+
+    @if (recentUploads.Count == 0)
+    {
+        <p class="text-muted">No uploaded customer login statistics XML files found.</p>
+    }
+    else
+    {
+        <ul class="list-group shadow-sm recent-list">
+            @foreach (var item in recentUploads)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>@item.FileName</strong>
+                        <div class="text-muted" style="font-size: 12px;">
+                            Customer: @item.ClientName
+                        </div>
+                    </div>
+                    <span class="badge bg-primary rounded-pill" style="font-size: 12px;">
+                        @item.Timestamp.ToString("yyyy-MM-dd HH:mm")
+                    </span>
+                </li>
+            }
         </ul>
-    </li>
-    <li class="list-group-item">
-        <strong>3. Dashboard</strong><br />
-        Interactive chart displaying login statistics over time.<br />
-        Features include:
-        <ul>
-            <li>Display login trends by Year or by Month</li>
-            <li>Support multiple customers at the same time</li>
-            <li>Smooth interactive switching without page reload</li>
-            <li>Export chart as PNG image</li>
-        </ul>
-    </li>
-    <li class="list-group-item">
-        <strong>4. REST API for Automated Upload</strong><br />
-        Instead of manual file upload, XML files can be uploaded by automated systems via secure API.<br />
-        Features include:
-        <ul>
-            <li>POST endpoint for XML upload</li>
-            <li>API Token authentication</li>
-            <li>Automatic storage in customer folder</li>
-            <li>Full compatibility with Upload.razor</li>
-        </ul>
-    </li>
-</ul>
+    }
+</div>
 
-<hr />
+@code {
+    private List<(string ClientName, string FileName, DateTime Timestamp)> recentUploads = new();
 
-<h4>Technical Features</h4>
-<ul class="list-group mb-4">
-    <li class="list-group-item">
-        <strong>XML Parsing Engine</strong><br />
-        Fully recursive XML parser that extracts:
-        <ul>
-            <li>Year, HalfYear, Quarter, Month, Week, Day</li>
-            <li>User and UserGroup statistics</li>
-            <li>Nested LoginStatistics (recursive structure)</li>
-        </ul>
-    </li>
-    <li class="list-group-item">
-        <strong>Excel Export</strong><br />
-        XML files can be converted into:
-        <ul>
-            <li>Total statistics sheet (Users + UserGroups)</li>
-            <li>Hierarchical breakdown sheet</li>
-            <li>Formatted according to data structure</li>
-        </ul>
-    </li>
-    <li class="list-group-item">
-        <strong>Chart Rendering</strong><br />
-        The Dashboard is powered by Chart.js with:
-        <ul>
-            <li>Dynamic dataset generation</li>
-            <li>Colors per customer</li>
-            <li>Canvas-safe rendering with automatic destroy()</li>
-        </ul>
-    </li>
-</ul>
+    protected override void OnInitialized()
+    {
+        var root = Path.Combine(Env.ContentRootPath, "Uploads");
 
-<hr />
+        if (!Directory.Exists(root))
+            return;
 
-<h4>How to Use the Application</h4>
-<ol class="mb-4">
-    <li>Go to <strong>Upload</strong> to upload XML files for each customer.</li>
-    <li>Check or delete uploaded files anytime on the <strong>Files</strong> page.</li>
-    <li>Use <strong>Dashboard</strong> to view login trends.</li>
-    <li>Integrate with your systems via the <strong>REST API</strong>.</li>
-</ol>
+        var clientDirs = Directory.GetDirectories(root);
+        var allFiles = clientDirs
+            .SelectMany(dir =>
+                Directory.GetFiles(dir, "*.xml")
+                        .Select(f => (
+                            ClientName: Path.GetFileName(dir),
+                            FileName: Path.GetFileName(f),
+                            Timestamp: System.IO.File.GetLastWriteTime(f)
+                        ))
+            )
+            .OrderByDescending(f => f.Timestamp)
+            .ToList();
 
-<hr />
+        recentUploads = allFiles.Take(5).ToList();
+    }
+}
 
-<p class="text-secondary">
-    If you encounter any issues or need enhancements, please contact the system administrator.
-</p>
+<style>
+    /* Feature Cards */
+    .home-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .home-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 18px rgba(0, 0, 0, 0.15);
+    }
+    .home-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        font-size: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
 
+    <!-- Recent Uploads -->
+    .recent-list .list-group-item {
+        border-left: 5px solid #0d6efd;
+        transition: background-color 0.2s ease;
+    }
+
+    .recent-list .list-group-item:hover {
+        background-color: #f6f9ff;
+    }
+</style>
