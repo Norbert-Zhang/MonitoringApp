@@ -7,6 +7,16 @@
 
 <div class="mb-3 d-flex gap-3">
     <div>
+        <label>Date Range: from</label>
+        <input type="date" class="form-control d-inline-block w-auto me-2"
+        @bind="fromDate"
+        @bind:after="async () => await DrawChart()" />
+        <label>to</label>
+        <input type="date" class="form-control d-inline-block w-auto"
+        @bind="toDate"
+        @bind:after="async () => await DrawChart()" />
+    </div>
+    <div>
         <label>Display mode: </label>
         <select class="form-select w-auto d-inline-block"
                 value="@mode"
@@ -36,6 +46,8 @@
 @code {
     private string mode = "year";
     private string chartType = "bar";
+    private DateOnly? fromDate = null;
+    private DateOnly? toDate = null;
     private Dictionary<string, List<(DateOnly Date, int Count, string Level)>>? data;
 
     [Inject] BlazorWebApp.Services.XmlStatisticsService StatsService { get; set; } = default!;
@@ -67,11 +79,10 @@
 
     private async Task DrawChart()
     {
-        if (data == null)
-            return;
-
-        var labels = GetLabels();
-        var datasets = GetDatasets(labels);
+        if (data == null) return;
+        var filtered = FilterDataByDateRange();
+        var labels = GetLabels(filtered);
+        var datasets = GetDatasets(filtered, labels);
 
         await JS.InvokeVoidAsync(
             "dashboardChart.renderChart",
@@ -82,13 +93,29 @@
         );
     }
 
+    private Dictionary<string, List<(DateOnly Date, int Count, string Level)>> FilterDataByDateRange()
+    {
+        var result = new Dictionary<string, List<(DateOnly, int, string)>>();
+
+        foreach (var client in data!)
+        {
+            var filteredRows = client.Value.Where(r =>
+                (!fromDate.HasValue || r.Date >= fromDate.Value) &&
+                (!toDate.HasValue || r.Date <= toDate.Value)
+            ).ToList();
+
+            result[client.Key] = filteredRows;
+        }
+
+        return result;
+    }
+
     // ------------------
     // Generate X-axis by year/month
     // ------------------
-    private List<string> GetLabels()
+    private List<string> GetLabels(Dictionary<string, List<(DateOnly Date, int Count, string Level)>> filtered)
     {
-        var all = data!.SelectMany(x => x.Value).ToList();
-
+        var all = filtered.SelectMany(x => x.Value).ToList();
         if (mode == "year")
         {
             return all.Where(x => x.Level == "YearStatistics")
@@ -110,9 +137,9 @@
     // ------------------
     // Generate chart data
     // ------------------
-    private List<object> GetDatasets(List<string> labels)
+    private List<object> GetDatasets(Dictionary<string, List<(DateOnly Date, int Count, string Level)>> filtered, List<string> labels)
     {
-        return data!.Select(client =>
+        return filtered.Select(client =>
             new
             {
                 label = client.Key,
