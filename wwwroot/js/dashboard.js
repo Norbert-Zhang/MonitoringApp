@@ -1,10 +1,7 @@
 ﻿window.dashboardChart = {
     current: null,
 
-    renderLineChart: function (canvasId, labels, datasets) {
-
-        const canvas = document.getElementById(canvasId);
-
+    renderChart: function (canvasId, labels, datasets, chartType) {
         // ---- Completely destroy all charts bound to this canvas. ----
         if (window.dashboardChart.current) {
             try {
@@ -24,16 +21,25 @@
         }
 
         // ---- Create a new chart ----
-        window.dashboardChart.current = new Chart(canvas, {
-            type: 'line',
+        const ctx = document.getElementById(canvasId).getContext('2d');  //const canvas = document.getElementById(canvasId);
+        window.dashboardChart.current = new Chart(ctx, {
+            type: chartType,
             data: {
                 labels: labels,
                 datasets: datasets.map(ds => ({
                     label: ds.label,
                     data: ds.data,
                     fill: false,
-                    tension: 0.3
+                    tension: 0.3,
+                    borderWidth: 2,
                 }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true }
+                }
             }
         });
     },

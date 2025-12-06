@@ -5,23 +5,37 @@
 
 <h3>Customer Login Statistics Dashboard</h3>
 
-<div class="mb-3 mt-3">
-    <label>Display mode: </label>
-    <select class="form-select w-auto d-inline-block"
-            value="@mode"
-            @onchange="OnModeChange">
-        <option value="year">By Year</option>
-        <option value="month">By Month</option>
-    </select>
-    <button class="btn btn-primary mx-2" @onclick="ExportChart">
-        Export as PNG
-    </button>
+<div class="mb-3 d-flex gap-3">
+    <div>
+        <label>Display mode: </label>
+        <select class="form-select w-auto d-inline-block"
+                value="@mode"
+                @onchange="OnModeChange">
+            <option value="year">By Year</option>
+            <option value="month">By Month</option>
+        </select>
+    </div>
+    <div>
+        <label>Chart Type:</label>
+        <select class="form-select w-auto d-inline-block"
+                @bind="chartType"
+                @bind:after="async () => await DrawChart()">
+            <option value="bar">Bar Chart</option>
+            <option value="line">Line Chart</option>
+        </select>
+    </div>
+    <div>
+        <button class="btn btn-primary mx-2" @onclick="ExportChart">
+            Export as PNG
+        </button>
+    </div>
 </div>
 
 <canvas id="loginChart" width="800" height="400"></canvas>
 
 @code {
     private string mode = "year";
+    private string chartType = "bar";
     private Dictionary<string, List<(DateOnly Date, int Count, string Level)>>? data;
 
     [Inject] BlazorWebApp.Services.XmlStatisticsService StatsService { get; set; } = default!;
@@ -32,9 +46,12 @@
         data = StatsService.LoadStatistics();
     }
 
-    private async Task ExportChart()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.InvokeVoidAsync("dashboardChart.exportChart", "loginChart");
+        if (firstRender)
+        {
+            await DrawChart();
+        }
     }
 
     private async Task OnModeChange(ChangeEventArgs e)
@@ -43,12 +60,9 @@
         await DrawChart();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task ExportChart()
     {
-        if (firstRender)
-        {
-            await DrawChart();
-        }
+        await JS.InvokeVoidAsync("dashboardChart.exportChart", "loginChart");
     }
 
     private async Task DrawChart()
@@ -60,10 +74,11 @@
         var datasets = GetDatasets(labels);
 
         await JS.InvokeVoidAsync(
-            "dashboardChart.renderLineChart",
+            "dashboardChart.renderChart",
             "loginChart",
             labels,
-            datasets
+            datasets,
+            chartType
         );
     }
 
