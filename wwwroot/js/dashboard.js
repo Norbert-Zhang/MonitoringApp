@@ -37,6 +37,19 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: "Login Count",
+                            font: {
+                                size: 15,
+                                weight: "bold"
+                            },
+                            /*color: "#000000"*/
+                        }
+                    }
+                },
                 plugins: {
                     legend: { display: true }
                 }
