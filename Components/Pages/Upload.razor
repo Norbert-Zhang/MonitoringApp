@@ -1,7 +1,11 @@
 ﻿@page "/upload"
 @rendermode InteractiveServer
 @inject BlazorWebApp.Services.FileService FileService
+@inject HttpClient Http
+@inject IConfiguration Config
+@inject NavigationManager Navigation
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http.Headers;
 
 <PageTitle>Upload File</PageTitle>
 
@@ -135,7 +139,21 @@ disabled="@(!canUpload || isUploading)"
                 return;
             }
 
-            await FileService.SaveClientXmlAsync(finalCustomerName, uploadedFile);
+            //await FileService.SaveClientXmlAsync(finalCustomerName, uploadedFile); // Ggfs. replace this with upload API
+            Http.DefaultRequestHeaders.Remove("X-Api-Key");
+            Http.DefaultRequestHeaders.Add("X-Api-Key", Config["ApiSettings:UploadApiToken"]);
+            using var form = new MultipartFormDataContent();
+            var streamContent = new StreamContent(uploadedFile.OpenReadStream(200 * 1024 * 1024)); // Max 200 MB
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
+            form.Add(streamContent, "file", uploadedFile.Name);
+            var apiUrl = Navigation.ToAbsoluteUri("/api/upload-xml").ToString();
+            apiUrl += "?client=" + finalCustomerName;
+            var response = await Http.PostAsync(apiUrl, form);
+            if (!response.IsSuccessStatusCode)
+            {
+                message = "Upload failed: " + response.ReasonPhrase;
+                return;
+            }
 
             message = $"{uploadedFile.Name} uploaded successfully!";
             // refresh client list if new one was added

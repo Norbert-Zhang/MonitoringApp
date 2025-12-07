@@ -1,6 +1,7 @@
 using BlazorWebApp.Components;
 using BlazorWebApp.Helpers;
 using BlazorWebApp.Services;
+using Microsoft.AspNetCore.Http.Features;
 using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,19 @@ builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<XmlStatisticsService>();
 builder.Services.AddSingleton<GlobalStatisticsCache>();
 builder.Services.AddHostedService<CachePreloader>();
+builder.Services.AddHttpClient();
+
+// Upload File Max size Config
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 200 * 1024 * 1024; // Max 200 MB
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartHeadersLengthLimit = int.MaxValue;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 200 * 1024 * 1024; // Max 200MB
+});
 
 var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
 
