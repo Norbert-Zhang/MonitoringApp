@@ -113,118 +113,115 @@ app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
     return Results.File(bytes, "application/xml", file);
 });
 
-static List<List<string>> BuildTotalStatsSheet(XDocument xdoc)
+static IEnumerable<string[]> BuildTotalStatsSheet(XDocument xdoc)
 {
     var root = xdoc.Root!;
     var login = root.Element("LoginStatistics")!;
     var total = login.Element("TotalStatistics")!;
 
-    var totalRows = new List<List<string>>
-        {
-            new() { "Field", "Value" },
-            new() { "System Name", (string)root.Attribute("SystemName")! },
-            new() { "System Version", "v_" + (string)root.Attribute("SystemVersion")! },
-            new() { "Start Date", (string)login.Attribute("StartDate")! },
-            new() { "Total Login Count", (string)total.Attribute("Count")! },
-            new() { "", "" },
-            // User statistics table
-            new() { "User ID", "Total Login Count" }
+    yield return new[] { "Field", "Value" };
+    yield return new[] { "System Name", root.Attribute("SystemName")?.Value ?? "" };
+    yield return new[] { "System Version", "v_" + (root.Attribute("SystemVersion")?.Value ?? "") };
+    yield return new[] { "Start Date", login.Attribute("StartDate")?.Value ?? "" };
+    yield return new[] { "Total Login Count", total.Attribute("Count")?.Value ?? "" };
+    yield return new[] { "", "" };
+    yield return new[] { "User ID", "Total Login Count" };
+
+    foreach (var u in total
+        .Element("Users")?
+        .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
+            ?? Enumerable.Empty<XElement>())
+    {
+        yield return new[] {
+            u.Attribute("ID")?.Value ?? "",
+            u.Attribute("Count")?.Value ?? ""
         };
-    // add user info rows
-    totalRows.AddRange(
-        total.Element("Users")?.Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
-        .Select(u => new List<string>
-        {
-                (string)u.Attribute("ID")!,
-                (string)u.Attribute("Count")!
-        }) ?? Enumerable.Empty<List<string>>()
-    );
-    totalRows.Add(new List<string> { "", "" });
-    // UserGroup statistics header
-    totalRows.Add(new List<string> { "User Group ID", "Total Login Count" });
-    // add user group rows
-    totalRows.AddRange(
-        total.Element("UserGroups")?
+    }
+
+    yield return new[] { "", "" };
+    yield return new[] { "User Group ID", "Total Login Count" };
+
+    foreach (var g in total
+        .Element("UserGroups")?
         .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserGroupInfo")
-        .Select(g => new List<string>
-        {
-                (string)g.Attribute("ID")!,
-                (string)g.Attribute("Count")!
-        }) ?? Enumerable.Empty<List<string>>()
-    );
-
-    return totalRows;
+            ?? Enumerable.Empty<XElement>())
+    {
+        yield return new[] {
+            g.Attribute("ID")?.Value ?? "",
+            g.Attribute("Count")?.Value ?? ""
+        };
+    }
 }
 
-static List<List<string>> BuildUserSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+static IEnumerable<string[]> BuildUserSheet(List<XmlNodeEntry> entries)
 {
-    var userRows = new List<List<string>>
+    yield return new[]
+    {
+        "Level","Year","Half Year","Quarter","Month","Week","Day","User ID","Login Count"
+    };
+
+    foreach (var e in entries.Where(e => e.Target == "User"))
+    {
+        yield return new[]
         {
-            new() { "Level","Year","Half Year","Quarter","Month","Week","Day","User ID", "Login Count" }
-        }.Concat(
-            entries
-                .Where(e => e.Target == "User") // users
-                .Select(e => new List<string>
-                {
-                    e.Level,
-                    e.Year?.ToString() ?? "",
-                    e.HalfYear?.ToString() ?? "",
-                    e.Quarter?.ToString() ?? "",
-                    e.Month?.ToString() ?? "",
-                    e.Week?.ToString() ?? "",
-                    e.Day?.ToString() ?? "",
-                    e.Id,
-                    e.Count.ToString()
-                })
-        ).ToList();
-    return userRows;
+            e.Level,
+            e.Year?.ToString() ?? "",
+            e.HalfYear?.ToString() ?? "",
+            e.Quarter?.ToString() ?? "",
+            e.Month?.ToString() ?? "",
+            e.Week?.ToString() ?? "",
+            e.Day?.ToString() ?? "",
+            e.Id,
+            e.Count.ToString()
+        };
+    }
 }
 
-static List<List<string>> BuildUserGroupSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+static IEnumerable<string[]> BuildUserGroupSheet(List<XmlNodeEntry> entries)
 {
-    var userGroupRows = new List<List<string>>
+    yield return new[]
+    {
+        "Level","Year","Half Year","Quarter","Month","Week","Day","User Group ID","Login Count"
+    };
+
+    foreach (var e in entries.Where(e => e.Target == "UserGroup"))
+    {
+        yield return new[]
         {
-            new() { "Level","Year","Half Year","Quarter","Month","Week","Day","User Group ID", "Login Count" }
-        }.Concat(
-            entries
-                .Where(e => e.Target == "UserGroup") // groups
-                .Select(e => new List<string>
-                {
-                    e.Level,
-                    e.Year?.ToString() ?? "",
-                    e.HalfYear?.ToString() ?? "",
-                    e.Quarter?.ToString() ?? "",
-                    e.Month?.ToString() ?? "",
-                    e.Week?.ToString() ?? "",
-                    e.Day?.ToString() ?? "",
-                    e.Id,
-                    e.Count.ToString()
-                })
-        ).ToList();
-    return userGroupRows;
+            e.Level,
+            e.Year?.ToString() ?? "",
+            e.HalfYear?.ToString() ?? "",
+            e.Quarter?.ToString() ?? "",
+            e.Month?.ToString() ?? "",
+            e.Week?.ToString() ?? "",
+            e.Day?.ToString() ?? "",
+            e.Id,
+            e.Count.ToString()
+        };
+    }
 }
 
-static List<List<string>> BuildStatsSheet(XDocument xdoc, List<XmlNodeEntry> entries)
+static IEnumerable<string[]> BuildStatsSheet(List<XmlNodeEntry> entries)
 {
-    var statsRows = new List<List<string>>
+    yield return new[]
+    {
+        "Level","Year","Half Year","Quarter","Month","Week","Day","Login Count"
+    };
+
+    foreach (var e in entries.Where(e => e.Target == "Stats"))
+    {
+        yield return new[]
         {
-            new() { "Level","Year","Half Year","Quarter","Month","Week","Day", "Login Count" }
-        }.Concat(
-            entries
-                .Where(e => e.Target == "Stats") // Stats
-                .Select(e => new List<string>
-                {
-                    e.Level,
-                    e.Year?.ToString() ?? "",
-                    e.HalfYear?.ToString() ?? "",
-                    e.Quarter?.ToString() ?? "",
-                    e.Month?.ToString() ?? "",
-                    e.Week?.ToString() ?? "",
-                    e.Day?.ToString() ?? "",
-                    e.Count.ToString()
-                })
-        ).ToList();
-    return statsRows;
+            e.Level,
+            e.Year?.ToString() ?? "",
+            e.HalfYear?.ToString() ?? "",
+            e.Quarter?.ToString() ?? "",
+            e.Month?.ToString() ?? "",
+            e.Week?.ToString() ?? "",
+            e.Day?.ToString() ?? "",
+            e.Count.ToString()
+        };
+    }
 }
 
 //Excel-File download API
@@ -237,12 +234,12 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
     var xdoc = cache.Customers[client].XmlDocs[file];
     var entries = XmlStatisticsHelper.ParseStatistics(xdoc.Root!.Element("LoginStatistics")!.Element("TotalStatistics")!);
     // prepare sheet data (your existing logic)
-    var dataSheets = new Dictionary<string, IEnumerable<List<string>>>
+    var dataSheets = new Dictionary<string, IEnumerable<string[]>>
     {
         ["TotalStats"] = BuildTotalStatsSheet(xdoc),
-        ["UserHierarchy"] = BuildUserSheet(xdoc, entries),
-        ["UserGroupHierarchy"] = BuildUserGroupSheet(xdoc, entries),
-        ["StatsHierarchy"] = BuildStatsSheet(xdoc, entries)
+        ["UserHierarchy"] = BuildUserSheet(entries),
+        ["UserGroupHierarchy"] = BuildUserGroupSheet(entries),
+        ["StatsHierarchy"] = BuildStatsSheet(entries)
     };
 
     // generate excel

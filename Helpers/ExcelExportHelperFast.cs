@@ -9,7 +9,7 @@ namespace BlazorWebApp.Helpers
         // --------------------------
         // Public: Create Excel File
         // --------------------------
-        public static byte[] CreateExcel(Dictionary<string, IEnumerable<List<string>>> sheetsData)
+        public static byte[] CreateExcel(Dictionary<string, IEnumerable<string[]>> sheetsData)
         {
             using var mem = new MemoryStream();
 
@@ -32,7 +32,7 @@ namespace BlazorWebApp.Helpers
                     WriteSheetStream(wsPart, sheet.Value);
 
                     AddFreezePane(wsPart);
-                    AddAutoFilter(wsPart, sheet.Value.First().Count);
+                    AddAutoFilter(wsPart, sheet.Value.First().Count());
 
                     sheets.Append(new Sheet
                     {
@@ -51,14 +51,14 @@ namespace BlazorWebApp.Helpers
         // ----------------------------------
         // High-performance streaming writer
         // ----------------------------------
-        private static void WriteSheetStream(WorksheetPart wsPart, IEnumerable<List<string>> rows)
+        private static void WriteSheetStream(WorksheetPart wsPart, IEnumerable<string[]> rows)
         {
             using var writer = OpenXmlWriter.Create(wsPart);
 
             writer.WriteStartElement(new Worksheet());
 
             // ===== ADD FIXED COLUMNS (width = 20) =====
-            int columnCount = rows.First().Count;
+            int columnCount = rows.First().Count();
             writer.WriteStartElement(new Columns());
             for (int i = 1; i <= columnCount; i++)
             {
