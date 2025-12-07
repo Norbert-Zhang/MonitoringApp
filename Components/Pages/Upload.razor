@@ -146,8 +146,8 @@ disabled="@(!canUpload || isUploading)"
             var streamContent = new StreamContent(uploadedFile.OpenReadStream(200 * 1024 * 1024)); // Max 200 MB
             streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
             form.Add(streamContent, "file", uploadedFile.Name);
+            form.Add(new StringContent(finalCustomerName), "client");
             var apiUrl = Navigation.ToAbsoluteUri("/api/upload-xml").ToString();
-            apiUrl += "?client=" + finalCustomerName;
             var response = await Http.PostAsync(apiUrl, form);
             if (!response.IsSuccessStatusCode)
             {

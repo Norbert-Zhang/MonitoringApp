@@ -69,22 +69,19 @@ app.MapPost("/api/upload-xml", async (
     if (token != apiToken)
         return Results.Unauthorized();
 
-    var client = request.Query["client"].ToString();
-    if (string.IsNullOrWhiteSpace(client))
-        return Results.BadRequest("Customer name is required.");
-
     if (!request.HasFormContentType)
         return Results.BadRequest("Form data is required.");
 
-    var form = await request.ReadFormAsync();
-    var file = form.Files.FirstOrDefault();
-
+    IFormFile? file = request.Form.Files["file"];
+    string? client = request.Form["client"];
     if (file == null)
-        return Results.BadRequest("XML file is required.");
-
+        return Results.BadRequest("XML file missing.");
     if (!file.FileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
         return Results.BadRequest("Only XML files are allowed.");
+    if (string.IsNullOrWhiteSpace(client))
+        return Results.BadRequest("Customer missing");
 
+    client = client.Trim();
     // CALL BACKUP BEFORE SAVING NEW FILE
     fileService.BackupFileFromDir(client);
 
@@ -93,8 +90,10 @@ app.MapPost("/api/upload-xml", async (
     Directory.CreateDirectory(clientDir);
     var savePath = Path.Combine(clientDir, file.FileName);
     using var fs = new FileStream(savePath, FileMode.Create);
-    await file.CopyToAsync(fs);
+    using var s = file.OpenReadStream();
+    await s.CopyToAsync(fs);
     fs.Dispose();
+    s.Dispose();
 
     // Update cache
     cache.AddFile(client, savePath);
