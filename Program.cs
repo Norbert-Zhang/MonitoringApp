@@ -18,10 +18,15 @@ builder.Services.AddServerSideBlazor(options =>
 // Add the services
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<XmlStatisticsService>();
+builder.Services.AddSingleton<GlobalStatisticsCache>();
 
 var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
 
 var app = builder.Build();
+
+// ------------------- Global cache initialization -------------------
+var cache = app.Services.GetRequiredService<GlobalStatisticsCache>();
+cache.Initialize();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -77,6 +82,10 @@ app.MapPost("/api/upload-xml", async (
     var savePath = Path.Combine(clientDir, file.FileName);
     using var fs = new FileStream(savePath, FileMode.Create);
     await file.CopyToAsync(fs);
+    fs.Dispose();
+
+    // Update cache
+    cache.AddFile(client, savePath);
 
     return Results.Ok($"Successfully uploaded: the '{file.FileName}' file for customer '{client}'.");
 });
@@ -210,11 +219,11 @@ static List<List<string>> BuildStatsSheet(XDocument xdoc, List<XmlNodeEntry> ent
 //Excel-File download API
 app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
 {
-    var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
-    if (!System.IO.File.Exists(xmlPath))
-        return Results.NotFound();
-
-    var xdoc = XDocument.Load(xmlPath);
+    //var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
+    //if (!System.IO.File.Exists(xmlPath)) return Results.NotFound();
+    //var xdoc = XDocument.Load(xmlPath);
+    if (!cache.Customers.ContainsKey(client) || !cache.Customers[client].XmlDocs.ContainsKey(file)) return Results.NotFound();
+    var xdoc = cache.Customers[client].XmlDocs[file];
     var entries = XmlStatisticsHelper.ParseStatistics(xdoc.Root!.Element("LoginStatistics")!.Element("TotalStatistics")!);
     // prepare sheet data (your existing logic)
     var dataSheets = new Dictionary<string, List<List<string>>>

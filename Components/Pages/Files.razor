@@ -47,9 +47,14 @@ else
 @code {
     private List<(string ClientName, string FileName)> files;
 
+    [Inject] BlazorWebApp.Services.GlobalStatisticsCache Cache { get; set; }
+
     protected override void OnInitialized()
     {
-        files = FileService.GetAllFiles();
+        //files = FileService.GetAllFiles();
+        files = Cache.Customers
+        .SelectMany(c => c.Value.Files.Select(f => (c.Key, f))).OrderBy(item => item.Key)
+        .ToList();
     }
 
     private string GetDownloadUrl(string client, string file)

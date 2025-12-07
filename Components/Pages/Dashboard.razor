@@ -52,12 +52,20 @@
     private DateOnly? toDate = null;
     private Dictionary<string, List<(DateOnly Date, int Count, string Level)>>? data;
 
-    [Inject] BlazorWebApp.Services.XmlStatisticsService StatsService { get; set; } = default!;
+    //[Inject] BlazorWebApp.Services.XmlStatisticsService StatsService { get; set; } = default!;
+    [Inject] BlazorWebApp.Services.GlobalStatisticsCache Cache { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
 
     protected override void OnInitialized()
     {
-        data = StatsService.LoadStatistics();
+        //data = StatsService.LoadStatistics();
+        data = Cache.Customers
+        .ToDictionary(
+            c => c.Key,
+            c => c.Value.Statistics.Values
+                .SelectMany(x => x)
+                .ToList()
+        );
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -99,7 +107,7 @@
     {
         var result = new Dictionary<string, List<(DateOnly, int, string)>>();
 
-        foreach (var client in data!)
+        foreach (var client in data!.Where(item => item.Value.Count > 0).OrderBy(item => item.Key))
         {
             var filteredRows = client.Value.Where(r =>
                 (!fromDate.HasValue || r.Date >= fromDate.Value) &&

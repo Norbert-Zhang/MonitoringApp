@@ -58,4 +58,33 @@ public class XmlStatisticsService
 
         return result;
     }
+
+    public List<(DateOnly Date, int Count, string Level)> ConvertXmlToStatistics(XDocument xdoc)
+    {
+        var list = new List<(DateOnly, int, string)>();
+        var root = xdoc.Root!;
+        var login = root.Element("LoginStatistics")!;
+        var total = login.Element("TotalStatistics")!;
+        var entries = XmlStatisticsHelper.ParseStatistics(total);
+        foreach (var entry in entries)
+        {
+            if (entry.Target == "Stats")
+            {
+                if (entry.Level == "YearStatistics")
+                {
+                    var dateOnly = new DateOnly(entry.Year ?? 1900, 12, 31);
+                    list.Add((dateOnly, entry.Count, entry.Level));
+                }
+                else if (entry.Level == "MonthStatistics")
+                {
+                    int year = entry.Year ?? 1900;
+                    int month = entry.Month ?? 1;
+                    int lastDay = DateTime.DaysInMonth(year, month);
+                    var dateOnly = new DateOnly(year, month, lastDay);
+                    list.Add((dateOnly, entry.Count, entry.Level));
+                }
+            }
+        }
+        return list;
+    }
 }

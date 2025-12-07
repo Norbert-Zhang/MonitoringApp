@@ -1,16 +1,18 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Hosting;
 
 namespace BlazorWebApp.Services
 {
     public class FileService
     {
         private readonly string _basePath;
+        private readonly IServiceProvider _services;
 
-        public FileService(IWebHostEnvironment env)
+        public FileService(IWebHostEnvironment env, IServiceProvider services)
         {
             _basePath = Path.Combine(env.ContentRootPath, "Uploads");
             Directory.CreateDirectory(_basePath);
+
+            _services = services;
         }
 
         public List<string?> GetExistingClients()
@@ -56,6 +58,8 @@ namespace BlazorWebApp.Services
             // Get only files directly under the directory (not subdirectories)
             var files = Directory.GetFiles(customerNameDir);
 
+            var cache = _services.GetRequiredService<GlobalStatisticsCache>();
+
             foreach (var file in files)
             {
                 string fileName = Path.GetFileName(file);
@@ -72,6 +76,8 @@ namespace BlazorWebApp.Services
                     try
                     {
                         File.Move(file, destPath);
+                        // Update the cache
+                        cache.RemoveFile(customerName, fileName);
                         break; // success
                     }
                     catch (IOException)
@@ -97,6 +103,12 @@ namespace BlazorWebApp.Services
             using var fs = new FileStream(filePath, FileMode.Create);
             using var stream = file.OpenReadStream(long.MaxValue);
             await stream.CopyToAsync(fs);
+            fs.Dispose();
+            stream.Dispose();
+
+            // Update the cache
+            var cache = _services.GetRequiredService<GlobalStatisticsCache>();
+            cache.AddFile(clientName, filePath);
         }
 
         public bool DeleteFile(string client, string file)
@@ -109,6 +121,11 @@ namespace BlazorWebApp.Services
                 if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
+
+                    // Update the cache
+                    var cache = _services.GetRequiredService<GlobalStatisticsCache>();
+                    cache.RemoveFile(client, file);
+
                     return true;
                 }
 
