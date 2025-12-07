@@ -63,13 +63,10 @@ app.MapRazorComponents<App>()
 app.MapPost("/api/upload-xml", async (
     HttpRequest request,
     IWebHostEnvironment env,
-    IConfiguration config,
-    BlazorWebApp.Services.FileService fileService) =>
+    FileService fileService) =>
 {
     var token = request.Headers["x-api-key"].ToString();
-    var expectedToken = config["ApiSettings:UploadApiToken"];
-
-    if (token != expectedToken)
+    if (token != apiToken)
         return Results.Unauthorized();
 
     var client = request.Query["client"].ToString();
