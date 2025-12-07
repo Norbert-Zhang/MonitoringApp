@@ -89,7 +89,7 @@
 
     private async Task DrawChart()
     {
-        if (data == null) return;
+        if (data == null || data.Count == 0) return;
         var filtered = FilterDataByDateRange();
         var labels = GetLabels(filtered);
         var datasets = GetDatasets(filtered, labels);
@@ -106,17 +106,23 @@
     private Dictionary<string, List<(DateOnly Date, int Count, string Level)>> FilterDataByDateRange()
     {
         var result = new Dictionary<string, List<(DateOnly, int, string)>>();
-
         foreach (var client in data!.Where(item => item.Value.Count > 0).OrderBy(item => item.Key))
         {
             var filteredRows = client.Value.Where(r =>
-                (!fromDate.HasValue || r.Date >= fromDate.Value) &&
-                (!toDate.HasValue || r.Date <= toDate.Value)
+                {
+                    if (mode == "year" && r.Level == "YearStatistics")
+                    {
+                        return (!fromDate.HasValue || r.Date.Year >= fromDate.Value.Year) && (!toDate.HasValue || r.Date.Year <= toDate.Value.Year);
+                    }
+                    else if (mode == "month" && r.Level == "MonthStatistics") // month
+                    {
+                        return (!fromDate.HasValue || (r.Date.Year >= fromDate.Value.Year && r.Date.Month >= fromDate.Value.Month)) && (!toDate.HasValue || (r.Date.Year <= toDate.Value.Year && r.Date.Month <= toDate.Value.Month));
+                    }
+                    return false;
+                }
             ).ToList();
-
             result[client.Key] = filteredRows;
         }
-
         return result;
     }
 
