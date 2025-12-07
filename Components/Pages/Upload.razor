@@ -38,9 +38,17 @@
 </div>
 
 <button class="btn btn-primary"
-disabled="@(!canUpload)"
+disabled="@(!canUpload || isUploading)"
 @onclick="UploadConfirm">
-    Upload
+    @if (isUploading)
+    {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        <span>Uploading...</span>
+    }
+    else
+    {
+        <span>Upload</span>
+    }
 </button>
 
 @if (!string.IsNullOrEmpty(message))
@@ -58,6 +66,7 @@ disabled="@(!canUpload)"
     private IBrowserFile? uploadedFile;
     private string message = "";
 
+    private bool isUploading = false;
     private bool canUpload =>
         uploadedFile != null &&
         (!string.IsNullOrWhiteSpace(selectedClient) ||
@@ -106,24 +115,35 @@ disabled="@(!canUpload)"
 
     private async Task UploadConfirm()
     {
+        if (isUploading) return;
+        isUploading = true;
+        message = "";
+
         string finalCustomerName = !string.IsNullOrWhiteSpace(newClientName) ? newClientName : selectedClient;
         finalCustomerName = finalCustomerName.Trim();
 
-        if (string.IsNullOrWhiteSpace(finalCustomerName))
+        try
         {
-            message = "Customer name is required.";
-            return;
+            if (string.IsNullOrWhiteSpace(finalCustomerName))
+            {
+                message = "Customer name is required.";
+                return;
+            }
+            if (uploadedFile == null)
+            {
+                message = "Please select an XML file.";
+                return;
+            }
+
+            await FileService.SaveClientXmlAsync(finalCustomerName, uploadedFile);
+
+            message = $"{uploadedFile.Name} uploaded successfully!";
+            // refresh client list if new one was added
+            existingClients = FileService.GetExistingClients();
         }
-        if (uploadedFile == null)
+        finally
         {
-            message = "Please select an XML file.";
-            return;
+            isUploading = false;
         }
-
-        await FileService.SaveClientXmlAsync(finalCustomerName, uploadedFile);
-
-        message = $"{uploadedFile.Name} uploaded successfully!";
-        // refresh client list if new one was added
-        existingClients = FileService.GetExistingClients();
     }
 }
