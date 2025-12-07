@@ -54,7 +54,7 @@ namespace BlazorWebApp.Helpers
         // ---------------------------
         // Private: Write One Sheet
         // ---------------------------
-        public static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
+        private static void WriteSheet(WorksheetPart ws, List<List<string>> rows)
         {
             var sheetData = new SheetData();
 
@@ -108,7 +108,7 @@ namespace BlazorWebApp.Helpers
         ///   - date
         ///   - string
         /// </summary>
-        public static Cell CreateCell(string value)
+        private static Cell CreateCell(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return CreateStringCell("");
@@ -125,7 +125,7 @@ namespace BlazorWebApp.Helpers
             return CreateStringCell(value);
         }
 
-        public static Cell CreateStringCell(string text)
+        private static Cell CreateStringCell(string text)
         {
             return new Cell
             {
@@ -135,7 +135,7 @@ namespace BlazorWebApp.Helpers
             };
         }
 
-        public static Cell CreateNumberCell(double number)
+        private static Cell CreateNumberCell(double number)
         {
             return new Cell
             {
@@ -148,7 +148,7 @@ namespace BlazorWebApp.Helpers
         /// <summary>
         /// Freeze the first row (row 1).
         /// </summary>
-        public static void FreezeHeaderRow(WorksheetPart wsPart)
+        private static void FreezeHeaderRow(WorksheetPart wsPart)
         {
             var worksheet = wsPart.Worksheet;
 
@@ -192,7 +192,7 @@ namespace BlazorWebApp.Helpers
         /// Adds AutoFilter to the worksheet, using the header row as filter range.
         /// Range example: A1:D1 (auto-detected based on column count)
         /// </summary>
-        public static void AddAutoFilter(WorksheetPart wsPart, int columnCount)
+        private static void AddAutoFilter(WorksheetPart wsPart, int columnCount)
         {
             if (columnCount <= 0)
                 return;

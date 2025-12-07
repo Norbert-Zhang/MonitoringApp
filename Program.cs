@@ -237,7 +237,7 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
     var xdoc = cache.Customers[client].XmlDocs[file];
     var entries = XmlStatisticsHelper.ParseStatistics(xdoc.Root!.Element("LoginStatistics")!.Element("TotalStatistics")!);
     // prepare sheet data (your existing logic)
-    var dataSheets = new Dictionary<string, List<List<string>>>
+    var dataSheets = new Dictionary<string, IEnumerable<List<string>>>
     {
         ["TotalStats"] = BuildTotalStatsSheet(xdoc),
         ["UserHierarchy"] = BuildUserSheet(xdoc, entries),
@@ -246,7 +246,7 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
     };
 
     // generate excel
-    var excelBytes = ExcelExportHelper.CreateExcel(dataSheets);
+    var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets); // ExcelExportHelper.CreateExcel(dataSheets);
     var excelFileName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
     return Results.File(
         excelBytes,
