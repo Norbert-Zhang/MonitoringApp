@@ -9,7 +9,7 @@
 
 @if (files is null)
 {
-    <p>Loading...</p>
+    <p>Loading file list...</p>
 }
 else
 {
@@ -34,7 +34,7 @@ else
                     </td>
                     <td>
                         <button class="btn btn-sm btn-outline-danger"
-                                @onclick="() => DeleteFile(f.ClientName, f.FileName)">
+                        @onclick="() => DeleteFile(f.ClientName, f.FileName)">
                             Delete
                         </button>
                     </td>
@@ -52,9 +52,12 @@ else
     protected override void OnInitialized()
     {
         //files = FileService.GetAllFiles();
-        files = Cache.Customers
-        .SelectMany(c => c.Value.Files.Select(f => (c.Key, f))).OrderBy(item => item.Key)
-        .ToList();
+        if (Cache.IsReady)
+        {
+            files = Cache.Customers
+            .SelectMany(c => c.Value.Files.Select(f => (c.Key, f))).OrderBy(item => item.Key)
+            .ToList();
+        }
     }
 
     private string GetDownloadUrl(string client, string file)

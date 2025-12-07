@@ -19,6 +19,7 @@ builder.Services.AddServerSideBlazor(options =>
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<XmlStatisticsService>();
 builder.Services.AddSingleton<GlobalStatisticsCache>();
+builder.Services.AddHostedService<CachePreloader>();
 
 var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
 
@@ -26,7 +27,7 @@ var app = builder.Build();
 
 // ------------------- Global cache initialization -------------------
 var cache = app.Services.GetRequiredService<GlobalStatisticsCache>();
-cache.Initialize();
+//cache.Initialize();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

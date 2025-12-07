@@ -7,12 +7,63 @@ public class GlobalStatisticsCache
     private readonly IWebHostEnvironment _env;
     private readonly XmlStatisticsService _statsService;
 
+    public bool IsReady { get; private set; } = false;
+
     public Dictionary<string, CustomerCache> Customers { get; private set; } = new();
 
     public GlobalStatisticsCache(IWebHostEnvironment env, XmlStatisticsService statsService)
     {
         _env = env;
         _statsService = statsService;
+    }
+
+    public async Task LoadAllFilesAsync()
+    {
+        Customers.Clear();
+
+        var uploads = Path.Combine(_env.ContentRootPath, "Uploads");
+        if (!Directory.Exists(uploads))
+            return;
+
+        var dirs = Directory.GetDirectories(uploads);
+
+        foreach (var dir in dirs)
+        {
+            var customer = Path.GetFileName(dir);
+            var customerCache = new CustomerCache();
+
+            var xmlFiles = Directory.GetFiles(dir, "*.xml");
+
+            foreach (var file in xmlFiles)
+            {
+                try
+                {
+                    // Asynchronous I/O
+                    using var fs = File.OpenRead(file);
+                    var xdoc = await XDocument.LoadAsync(fs, LoadOptions.None, CancellationToken.None);
+                    fs.Dispose();
+                    var fileName = Path.GetFileName(file);
+
+                    customerCache.Files.Add(fileName);
+                    customerCache.XmlDocs[fileName] = xdoc;
+
+                    // Asynchronous parsing of statistics → Non-blocking UI
+                    var stats = _statsService.ConvertXmlToStatistics(xdoc);
+                    customerCache.Statistics[fileName] = stats;
+                }
+                catch
+                {
+                    // Skip corrupt/uploading XML files
+                }
+            }
+
+            if (customerCache.XmlDocs.Count > 0)
+            {
+                Customers[customer] = customerCache;
+            }
+        }
+
+        IsReady = true;
     }
 
     // ------------- Initialization: Load all XML Files -------------
@@ -46,6 +97,7 @@ public class GlobalStatisticsCache
                 Customers[customer] = customerCache;
             }
         }
+        IsReady = true;
     }
 
     // ------------- Update cache after adding a XML file -------------
