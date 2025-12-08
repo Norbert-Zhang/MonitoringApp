@@ -5,11 +5,13 @@
 
 <PageTitle>System Overview</PageTitle>
 
-<h2>System Overview — Customer Login Statistics Platform</h2>
+<div class="d-flex align-items-center justify-content-xl-start mb-3">
+    <h2 class="me-3">System Overview — Customer Login Statistics Platform</h2>
 
-<button class="btn btn-warning mt-3 mb-3" @onclick="ResetCache">
-    <i class="bi bi-arrow-repeat"></i> Reset Cache
-</button>
+    <button class="btn btn-warning" @onclick="ResetCache">
+        <i class="bi bi-arrow-repeat"></i> Reset Cache
+    </button>
+</div>
 
 @if (showMessage)
 {
