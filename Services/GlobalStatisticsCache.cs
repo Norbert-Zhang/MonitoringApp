@@ -95,18 +95,26 @@ public class GlobalStatisticsCache
     // ------------- Write the excel file by the XML File -------------
     public void WriteExcelFile(string customer, string fileName, XDocument xdoc, List<XmlNodeEntry> entries, bool overwrite = false)
     {
-        var excelDir = Path.Combine(_env.ContentRootPath, "Uploads", customer, "Excel");
-        var excelFileName = Path.GetFileNameWithoutExtension(fileName) + ".xlsx";
-        var excelPath = Path.Combine(excelDir, excelFileName);
-        if (!File.Exists(excelPath) || overwrite)
+        try
         {
-            Directory.CreateDirectory(excelDir);
-            // Convert to Excel-Data-Sheets
-            var dataSheets = _statsService.ConvertXmlToExcelDataSheets(xdoc, entries);
-            // generate Excel byte[]
-            var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets);
-            // save excel
-            File.WriteAllBytes(excelPath, excelBytes);
+            var excelDir = Path.Combine(_env.ContentRootPath, "Uploads", customer, "Excel");
+            var excelFileName = Path.GetFileNameWithoutExtension(fileName) + ".xlsx";
+            var excelPath = Path.Combine(excelDir, excelFileName);
+            if (!File.Exists(excelPath) || overwrite)
+            {
+                Directory.CreateDirectory(excelDir);
+                // Convert to Excel-Data-Sheets
+                var dataSheets = _statsService.ConvertXmlToExcelDataSheets(xdoc, entries);
+                // generate Excel byte[]
+                var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets);
+                // save excel
+                File.WriteAllBytes(excelPath, excelBytes);
+            }
+        }
+        catch (Exception ex) {
+
+            Console.WriteLine("Excel generation error: " + ex.ToString());
+            throw; // or return Results.Problem()
         }
     }
 
