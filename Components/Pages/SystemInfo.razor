@@ -5,21 +5,23 @@
 
 <PageTitle>System Overview</PageTitle>
 
-<h2>Welcome to the Customer Login Statistics Web Application</h2>
+<h2>System Overview — Customer Login Statistics Platform</h2>
 
-<button class="btn btn-warning mb-3" @onclick="ResetCache">
+<button class="btn btn-warning mt-3 mb-3" @onclick="ResetCache">
     <i class="bi bi-arrow-repeat"></i> Reset Cache
 </button>
+
 @if (showMessage)
 {
-    <div class="alert alert-success">Cache reset successfully. Reloading data...</div>
+    <div class="alert alert-success">
+        Cache reset successfully. Data is being reloaded in the background...
+    </div>
 }
 
 <p class="text-secondary">
-    This system provides a complete solution for collecting, managing, analyzing, and visualizing
-    login statistics from multiple GOBENCH customers.
-    It supports manual and automated XML uploads, interactive dashboards, Excel exports,
-    activity overview widgets, and a fully documented REST API.
+    This system provides a complete solution for collecting, managing, analyzing, and visualizing login statistics from multiple GOBENCH customers.
+    It supports both manual XML uploads and automated REST API submissions,
+    and offers interactive dashboards, Excel exports, and full caching for high performance on large datasets.
 </p>
 
 <hr />
@@ -28,11 +30,11 @@
 
 <ul class="list-group mb-4">
 
-    <!-- Upload -->
+    <!-- Upload Page -->
     <li class="list-group-item">
         <strong>1. Upload Page</strong><br />
-        Upload XML login statistics to specific customer folders.<br />
-        Features:
+        Manually upload XML login statistics to specific customer folders.<br />
+        Features include:
         <ul>
             <li>Select customer from dropdown or create a new customer name</li>
             <li>Automatic backup of existing files before uploading new ones</li>
@@ -41,15 +43,15 @@
         </ul>
     </li>
 
-    <!-- Files -->
+    <!-- Files Page -->
     <li class="list-group-item">
         <strong>2. Files Page</strong><br />
         View and manage all uploaded XML files grouped by customer.<br />
-        Functions:
+        Available actions:
         <ul>
             <li>Download raw XML files</li>
-            <li>Download Excel-converted files</li>
-            <li>Delete XML files</li>
+            <li>Convert XML → Excel and download</li>
+            <li>Immediate file deletion (with confirmation)</li>
         </ul>
     </li>
 
@@ -59,28 +61,30 @@
         A fully interactive chart-based dashboard visualizing login statistics.<br />
         Features:
         <ul>
-            <li>Time filtering via <b>From</b> and <b>To</b> date selectors</li>
-            <li>Switch between <b>Year view</b> and <b>Month view</b></li>
-            <li>Chart type selection: <b>Bar chart</b> or <b>Line chart</b></li>
+            <li>Time filters (<b>From</b> / <b>To</b>)</li>
+            <li>Mode switching: <b>Year</b> or <b>Month</b> view</li>
+            <li>Chart type selection: <b>Bar</b> or <b>Line</b></li>
             <li>Export chart as PNG</li>
-            <li>Supports multiple customers at once</li>
+            <li>Automatic per-customer coloring</li>
+            <li>Shared cache → fast load</li>
         </ul>
     </li>
 
     <!-- REST API -->
     <li class="list-group-item">
         <strong>4. REST API for Automated Uploads</strong><br />
-        Systems can upload XML data programmatically.<br />
-        Features:
+        Enables automated systems to upload XML statistics programmatically.<br />
+        Capabilities:
         <ul>
-            <li>POST endpoint for uploading statistics</li>
+            <li>Simple POST endpoint for file submission</li>
             <li>API Key authentication</li>
-            <li>Direct integration with server storage</li>
+            <li>Automatic folder creation per customer</li>
             <li>Full compatibility with the manual Upload workflow</li>
+            <li>Shared cache update after each upload</li>
         </ul>
     </li>
 
-    <!-- Home Dashboard -->
+    <!-- Home Page -->
     <li class="list-group-item">
         <strong>5. Home Overview Dashboard</strong><br />
         A visual summary of system activity.<br />
@@ -89,6 +93,20 @@
             <li><b>Recent 5 Uploads</b> list</li>
         </ul>
     </li>
+
+    <!-- Cache & Performance System -->
+    <li class="list-group-item">
+        <strong>6. Intelligent Cache and Performance System</strong><br />
+        The system uses a high-performance caching layer to handle large datasets.<br />
+        Features:
+        <ul>
+            <li>All XML files parsed once during startup (async preload)</li>
+            <li>Centralized memory cache for customers and statistics</li>
+            <li>Zero XML reading during dashboard or file browsing → instant loading</li>
+            <li>pre-generated Excel files stored on disk for fast download</li>
+        </ul>
+    </li>
+
 </ul>
 
 <hr />
@@ -99,31 +117,29 @@
 
     <!-- XML Parsing -->
     <li class="list-group-item">
-        <strong>XML Parsing Engine</strong><br />
-        Fully recursive XML parser extracting:
+        <strong>Advanced XML Parsing Engine</strong><br />
+        Fully recursive processor supporting:
         <ul>
             <li>Year / Half-Year / Quarter / Month / Week / Day levels</li>
-            <li>User and UserGroup login counts</li>
+            <li>User and UserGroup login statistics</li>
             <li>Nested hierarchical statistics</li>
         </ul>
     </li>
 
     <!-- Excel Export -->
     <li class="list-group-item">
-        <strong>Advanced Excel Export</strong><br />
-        XML files can be converted into a multi-sheet XLSX file with:
+        <strong>Optimized Excel Export Pipeline</strong><br />
+        XML → Excel conversion provides:
         <ul>
-            <li>Formatted Total Statistics sheet</li>
-            <li>User hierarchy sheet</li>
-            <li>UserGroup hierarchy sheet</li>
-            <li>Stats hierarchy sheet</li>
-            <li><b>Numeric columns exported as true Number type</b></li>
-            <li><b>AutoFilter enabled on every sheet</b></li>
-            <li><b>Freeze Panes enabled (first row locked)</b></li>
+            <li>Four structured sheets (Total, Users, Groups, Stats)</li>
+            <li>True Number cell types</li>
+            <li>Freeze Panes (header row)</li>
+            <li>AutoFilter on all columns</li>
+            <li>Consistent column widths</li>
         </ul>
     </li>
 
-    <!-- Chart Rendering -->
+    <!-- Chart Engine -->
     <li class="list-group-item">
         <strong>Chart Rendering Technology</strong><br />
         Dashboard charts powered by Chart.js with:
@@ -138,18 +154,20 @@
 <hr />
 
 <h3>How to Use the Application</h3>
+
 <ol class="mb-4">
     <li>Upload XML files via the <strong>Upload</strong> page.</li>
-    <li>Manage, download, or delete files in <strong>Files</strong>.</li>
+    <li>Review, download, or delete in <strong>Files</strong>.</li>
     <li>Visualize login stats using <strong>Dashboard</strong>.</li>
-    <li>Automate uploads using the <strong>REST API</strong>.</li>
-    <li>Check system activity on the <strong>Home</strong> page.</li>
+    <li>Integrate automated systems via the <strong>REST API</strong>.</li>
+    <li>Check system activity on the <strong>Home</strong> Page.</li>
+    <li>Reset cache when updating or replacing files.</li>
 </ol>
 
 <hr />
 
 <p class="text-secondary">
-    If you need new features, chart types, Excel formats, API extensions, or performance improvements,
+    For support, feature requests, or performance optimization inquiries,
     please contact the system administrator.
 </p>
 
