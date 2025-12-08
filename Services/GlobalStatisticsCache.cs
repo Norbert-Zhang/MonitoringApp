@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using BlazorWebApp.Helpers;
+using System.Xml.Linq;
 
 namespace BlazorWebApp.Services;
 
@@ -48,7 +49,7 @@ public class GlobalStatisticsCache
                     customerCache.XmlDocs[fileName] = xdoc;
 
                     // Asynchronous parsing of statistics → Non-blocking UI
-                    var stats = _statsService.ConvertXmlToStatistics(xdoc);
+                    var stats = _statsService.ConvertXmlToStatistics(xdoc, out _);
                     customerCache.Statistics[fileName] = stats;
                 }
                 catch
@@ -89,7 +90,7 @@ public class GlobalStatisticsCache
                 customerCache.Files.Add(fileName);
                 customerCache.XmlDocs[fileName] = xdoc;
 
-                var stats = _statsService.ConvertXmlToStatistics(xdoc);
+                var stats = _statsService.ConvertXmlToStatistics(xdoc, out _);
                 customerCache.Statistics[fileName] = stats;
             }
             if (customerCache.XmlDocs.Count > 0)
@@ -107,14 +108,22 @@ public class GlobalStatisticsCache
             Customers[customer] = new CustomerCache();
 
         var file = Path.GetFileName(filePath);
-
         var xdoc = XDocument.Load(filePath);
-
         Customers[customer].Files.Add(file);
         Customers[customer].XmlDocs[file] = xdoc;
-
-        var stats = _statsService.ConvertXmlToStatistics(xdoc);
+        var stats = _statsService.ConvertXmlToStatistics(xdoc, out var entries);
         Customers[customer].Statistics[file] = stats;
+
+        // Convert to Excel-Data-Sheets
+        var dataSheets = _statsService.ConvertXmlToExcelDataSheets(xdoc, entries);
+        // generate Excel byte[]
+        var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets);
+        // save excel
+        var excelFileName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
+        var excelDir = Path.Combine(_env.ContentRootPath, "Uploads", customer, "Excel");
+        Directory.CreateDirectory(excelDir);
+        var excelPath = Path.Combine(excelDir, excelFileName);
+        File.WriteAllBytes(excelPath, excelBytes);
     }
 
     // ------------- Update cache after deleting a XML File -------------

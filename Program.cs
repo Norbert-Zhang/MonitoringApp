@@ -113,138 +113,16 @@ app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
     return Results.File(bytes, "application/xml", file);
 });
 
-static IEnumerable<string[]> BuildTotalStatsSheet(XDocument xdoc)
-{
-    var root = xdoc.Root!;
-    var login = root.Element("LoginStatistics")!;
-    var total = login.Element("TotalStatistics")!;
-
-    yield return new[] { "Field", "Value" };
-    yield return new[] { "System Name", root.Attribute("SystemName")?.Value ?? "" };
-    yield return new[] { "System Version", "v_" + (root.Attribute("SystemVersion")?.Value ?? "") };
-    yield return new[] { "Start Date", login.Attribute("StartDate")?.Value ?? "" };
-    yield return new[] { "Total Login Count", total.Attribute("Count")?.Value ?? "" };
-    yield return new[] { "", "" };
-    yield return new[] { "User ID", "Total Login Count" };
-
-    foreach (var u in total
-        .Element("Users")?
-        .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserInfo")
-            ?? Enumerable.Empty<XElement>())
-    {
-        yield return new[] {
-            u.Attribute("ID")?.Value ?? "",
-            u.Attribute("Count")?.Value ?? ""
-        };
-    }
-
-    yield return new[] { "", "" };
-    yield return new[] { "User Group ID", "Total Login Count" };
-
-    foreach (var g in total
-        .Element("UserGroups")?
-        .Elements("GOBENCH.Users.UserStatistics.UserStatistics.UserLoginStatistics.UserGroupInfo")
-            ?? Enumerable.Empty<XElement>())
-    {
-        yield return new[] {
-            g.Attribute("ID")?.Value ?? "",
-            g.Attribute("Count")?.Value ?? ""
-        };
-    }
-}
-
-static IEnumerable<string[]> BuildUserSheet(List<XmlNodeEntry> entries)
-{
-    yield return new[]
-    {
-        "Level","Year","Half Year","Quarter","Month","Week","Day","User ID","Login Count"
-    };
-
-    foreach (var e in entries.Where(e => e.Target == "User"))
-    {
-        yield return new[]
-        {
-            e.Level,
-            e.Year?.ToString() ?? "",
-            e.HalfYear?.ToString() ?? "",
-            e.Quarter?.ToString() ?? "",
-            e.Month?.ToString() ?? "",
-            e.Week?.ToString() ?? "",
-            e.Day?.ToString() ?? "",
-            e.Id,
-            e.Count.ToString()
-        };
-    }
-}
-
-static IEnumerable<string[]> BuildUserGroupSheet(List<XmlNodeEntry> entries)
-{
-    yield return new[]
-    {
-        "Level","Year","Half Year","Quarter","Month","Week","Day","User Group ID","Login Count"
-    };
-
-    foreach (var e in entries.Where(e => e.Target == "UserGroup"))
-    {
-        yield return new[]
-        {
-            e.Level,
-            e.Year?.ToString() ?? "",
-            e.HalfYear?.ToString() ?? "",
-            e.Quarter?.ToString() ?? "",
-            e.Month?.ToString() ?? "",
-            e.Week?.ToString() ?? "",
-            e.Day?.ToString() ?? "",
-            e.Id,
-            e.Count.ToString()
-        };
-    }
-}
-
-static IEnumerable<string[]> BuildStatsSheet(List<XmlNodeEntry> entries)
-{
-    yield return new[]
-    {
-        "Level","Year","Half Year","Quarter","Month","Week","Day","Login Count"
-    };
-
-    foreach (var e in entries.Where(e => e.Target == "Stats"))
-    {
-        yield return new[]
-        {
-            e.Level,
-            e.Year?.ToString() ?? "",
-            e.HalfYear?.ToString() ?? "",
-            e.Quarter?.ToString() ?? "",
-            e.Month?.ToString() ?? "",
-            e.Week?.ToString() ?? "",
-            e.Day?.ToString() ?? "",
-            e.Count.ToString()
-        };
-    }
-}
-
 //Excel-File download API
 app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
 {
-    //var xmlPath = Path.Combine(env.ContentRootPath, "Uploads", client, file);
-    //if (!System.IO.File.Exists(xmlPath)) return Results.NotFound();
-    //var xdoc = XDocument.Load(xmlPath);
-    if (!cache.Customers.ContainsKey(client) || !cache.Customers[client].XmlDocs.ContainsKey(file)) return Results.NotFound();
-    var xdoc = cache.Customers[client].XmlDocs[file];
-    var entries = XmlStatisticsHelper.ParseStatistics(xdoc.Root!.Element("LoginStatistics")!.Element("TotalStatistics")!);
-    // prepare sheet data (your existing logic)
-    var dataSheets = new Dictionary<string, IEnumerable<string[]>>
-    {
-        ["TotalStats"] = BuildTotalStatsSheet(xdoc),
-        ["UserHierarchy"] = BuildUserSheet(entries),
-        ["UserGroupHierarchy"] = BuildUserGroupSheet(entries),
-        ["StatsHierarchy"] = BuildStatsSheet(entries)
-    };
-
-    // generate excel
-    var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets); // ExcelExportHelper.CreateExcel(dataSheets);
+    var excelDir = Path.Combine(env.ContentRootPath, "Uploads", client, "Excel");
     var excelFileName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
+    var excelPath = Path.Combine(excelDir, excelFileName);
+    if (!System.IO.File.Exists(excelPath))
+        return Results.NotFound();
+
+    var excelBytes = System.IO.File.ReadAllBytes(excelPath);
     return Results.File(
         excelBytes,
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
