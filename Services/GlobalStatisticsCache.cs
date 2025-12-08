@@ -46,19 +46,18 @@ public class GlobalStatisticsCache
                     var fileName = Path.GetFileName(file);
 
                     customerCache.Files.Add(fileName);
-                    customerCache.XmlDocs[fileName] = xdoc;
-
                     // Asynchronous parsing of statistics → Non-blocking UI
-                    var stats = _statsService.ConvertXmlToStatistics(xdoc, out _);
+                    var stats = _statsService.ConvertXmlToStatistics(xdoc, out var entries);
                     customerCache.Statistics[fileName] = stats;
+
+                    WriteExcelFile(customer, fileName, xdoc, entries);
                 }
                 catch
                 {
                     // Skip corrupt/uploading XML files
                 }
             }
-
-            if (customerCache.XmlDocs.Count > 0)
+            if (customerCache.Files.Count > 0)
             {
                 Customers[customer] = customerCache;
             }
@@ -88,12 +87,12 @@ public class GlobalStatisticsCache
                 var xdoc = XDocument.Load(file);
 
                 customerCache.Files.Add(fileName);
-                customerCache.XmlDocs[fileName] = xdoc;
-
-                var stats = _statsService.ConvertXmlToStatistics(xdoc, out _);
+                var stats = _statsService.ConvertXmlToStatistics(xdoc, out var entries);
                 customerCache.Statistics[fileName] = stats;
+
+                WriteExcelFile(customer, fileName, xdoc, entries);
             }
-            if (customerCache.XmlDocs.Count > 0)
+            if (customerCache.Files.Count > 0)
             {
                 Customers[customer] = customerCache;
             }
@@ -110,20 +109,10 @@ public class GlobalStatisticsCache
         var file = Path.GetFileName(filePath);
         var xdoc = XDocument.Load(filePath);
         Customers[customer].Files.Add(file);
-        Customers[customer].XmlDocs[file] = xdoc;
         var stats = _statsService.ConvertXmlToStatistics(xdoc, out var entries);
         Customers[customer].Statistics[file] = stats;
 
-        // Convert to Excel-Data-Sheets
-        var dataSheets = _statsService.ConvertXmlToExcelDataSheets(xdoc, entries);
-        // generate Excel byte[]
-        var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets);
-        // save excel
-        var excelFileName = Path.GetFileNameWithoutExtension(file) + ".xlsx";
-        var excelDir = Path.Combine(_env.ContentRootPath, "Uploads", customer, "Excel");
-        Directory.CreateDirectory(excelDir);
-        var excelPath = Path.Combine(excelDir, excelFileName);
-        File.WriteAllBytes(excelPath, excelBytes);
+        WriteExcelFile(customer, file, xdoc, entries, true);
     }
 
     // ------------- Update cache after deleting a XML File -------------
@@ -133,8 +122,25 @@ public class GlobalStatisticsCache
             return;
 
         Customers[customer].Files.Remove(file);
-        Customers[customer].XmlDocs.Remove(file);
         Customers[customer].Statistics.Remove(file);
+    }
+
+    // ------------- Write the excel file by the XML File -------------
+    public void WriteExcelFile(string customer, string fileName, XDocument xdoc, List<XmlNodeEntry> entries, bool overwrite = false)
+    {
+        var excelDir = Path.Combine(_env.ContentRootPath, "Uploads", customer, "Excel");
+        var excelFileName = Path.GetFileNameWithoutExtension(fileName) + ".xlsx";
+        var excelPath = Path.Combine(excelDir, excelFileName);
+        if (!File.Exists(excelPath) || overwrite)
+        {
+            Directory.CreateDirectory(excelDir);
+            // Convert to Excel-Data-Sheets
+            var dataSheets = _statsService.ConvertXmlToExcelDataSheets(xdoc, entries);
+            // generate Excel byte[]
+            var excelBytes = ExcelExportHelperFast.CreateExcel(dataSheets);
+            // save excel
+            File.WriteAllBytes(excelPath, excelBytes);
+        }
     }
 }
 
@@ -143,6 +149,5 @@ public class GlobalStatisticsCache
 public class CustomerCache
 {
     public List<string> Files { get; set; } = new();
-    public Dictionary<string, XDocument> XmlDocs { get; set; } = new();
     public Dictionary<string, List<(DateOnly Date, int Count, string Level)>> Statistics { get; set; } = new();
 }
