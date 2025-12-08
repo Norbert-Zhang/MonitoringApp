@@ -18,9 +18,10 @@ public class GlobalStatisticsCache
         _statsService = statsService;
     }
 
-    public async Task LoadAllFilesAsync()
+    public async Task LoadAllCustomersAsync()
     {
         Customers.Clear();
+        IsReady = false;
 
         var uploads = Path.Combine(_env.ContentRootPath, "Uploads");
         if (!Directory.Exists(uploads))
@@ -66,40 +67,6 @@ public class GlobalStatisticsCache
         IsReady = true;
     }
 
-    // ------------- Initialization: Load all XML Files -------------
-    public void Initialize()
-    {
-        Customers.Clear();
-
-        var uploads = Path.Combine(_env.ContentRootPath, "Uploads");
-        if (!Directory.Exists(uploads))
-            return;
-
-        foreach (var dir in Directory.GetDirectories(uploads))
-        {
-            var customer = Path.GetFileName(dir);
-            var customerCache = new CustomerCache();
-
-            foreach (var file in Directory.GetFiles(dir, "*.xml"))
-            {
-                var fileName = Path.GetFileName(file);
-
-                var xdoc = XDocument.Load(file);
-
-                customerCache.Files.Add(fileName);
-                var stats = _statsService.ConvertXmlToStatistics(xdoc, out var entries);
-                customerCache.Statistics[fileName] = stats;
-
-                WriteExcelFile(customer, fileName, xdoc, entries);
-            }
-            if (customerCache.Files.Count > 0)
-            {
-                Customers[customer] = customerCache;
-            }
-        }
-        IsReady = true;
-    }
-
     // ------------- Update cache after adding a XML file -------------
     public void AddFile(string customer, string filePath)
     {
@@ -142,6 +109,13 @@ public class GlobalStatisticsCache
             File.WriteAllBytes(excelPath, excelBytes);
         }
     }
+
+    public void ResetCache()
+    {
+        // Asynchronous background cache rebuild
+        _ = Task.Run(() => LoadAllCustomersAsync());
+    }
+
 }
 
 // --------------------------------------------------------------------

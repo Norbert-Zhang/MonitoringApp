@@ -20,7 +20,7 @@ public class CachePreloader : BackgroundService
         await Task.Delay(3000, stoppingToken);
         try
         {
-            await _cache.LoadAllFilesAsync();
+            await _cache.LoadAllCustomersAsync();
         }
         catch (Exception ex)
         {

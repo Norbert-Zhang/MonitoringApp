@@ -1,9 +1,20 @@
 ﻿@page "/system-info"
 @rendermode InteractiveServer
+@inject BlazorWebApp.Services.GlobalStatisticsCache Cache
+@inject IJSRuntime JS
 
 <PageTitle>System Overview</PageTitle>
 
 <h2>Welcome to the Customer Login Statistics Web Application</h2>
+
+<button class="btn btn-warning mb-3" @onclick="ResetCache">
+    <i class="bi bi-arrow-repeat"></i> Reset Cache
+</button>
+@if (showMessage)
+{
+    <div class="alert alert-success">Cache reset successfully. Reloading data...</div>
+}
+
 <p class="text-secondary">
     This system provides a complete solution for collecting, managing, analyzing, and visualizing
     login statistics from multiple GOBENCH customers.
@@ -141,3 +152,18 @@
     If you need new features, chart types, Excel formats, API extensions, or performance improvements,
     please contact the system administrator.
 </p>
+
+@code {
+
+    private bool showMessage = false;
+
+    private async Task ResetCache()
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to reset the cache?");
+        if (!confirm) return;
+
+        Cache.ResetCache();
+        showMessage = true;
+    }
+
+}
