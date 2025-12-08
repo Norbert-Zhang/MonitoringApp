@@ -6,9 +6,6 @@ namespace BlazorWebApp.Helpers
 {
     public static class ExcelExportHelperFast
     {
-        // --------------------------
-        // Public: Create Excel File
-        // --------------------------
         public static byte[] CreateExcel(Dictionary<string, IEnumerable<string[]>> sheetsData)
         {
             using var mem = new MemoryStream();
@@ -18,28 +15,25 @@ namespace BlazorWebApp.Helpers
                 var wb = doc.AddWorkbookPart();
                 wb.Workbook = new Workbook();
 
-                // Minimal styling (optional)
-                var styles = wb.AddNewPart<WorkbookStylesPart>();
-                styles.Stylesheet = CreateMinimalStylesheet();
-                styles.Stylesheet.Save();
-
                 var sheets = wb.Workbook.AppendChild(new Sheets());
                 uint sheetId = 1;
 
-                foreach (var sheet in sheetsData)
+                foreach (var kv in sheetsData)
                 {
+                    string sheetName = kv.Key;
+                    IEnumerable<string[]> rows = kv.Value;
+
                     var wsPart = wb.AddNewPart<WorksheetPart>();
-                    WriteSheetStream(wsPart, sheet.Value);
 
-                    AddFreezePane(wsPart);
-                    AddAutoFilter(wsPart, sheet.Value.First().Count());
+                    WriteWorksheetStream(wsPart, rows);
 
-                    sheets.Append(new Sheet
-                    {
-                        Id = wb.GetIdOfPart(wsPart),
-                        SheetId = sheetId++,
-                        Name = sheet.Key
-                    });
+                    sheets.Append(
+                        new Sheet
+                        {
+                            Id = wb.GetIdOfPart(wsPart),
+                            SheetId = sheetId++,
+                            Name = sheetName
+                        });
                 }
 
                 wb.Workbook.Save();
@@ -48,19 +42,39 @@ namespace BlazorWebApp.Helpers
             return mem.ToArray();
         }
 
-        // ----------------------------------
-        // High-performance streaming writer
-        // ----------------------------------
-        private static void WriteSheetStream(WorksheetPart wsPart, IEnumerable<string[]> rows)
+        private static void WriteWorksheetStream(WorksheetPart wsPart, IEnumerable<string[]> rows)
         {
             using var writer = OpenXmlWriter.Create(wsPart);
 
             writer.WriteStartElement(new Worksheet());
 
-            // ===== ADD FIXED COLUMNS (width = 20) =====
-            int columnCount = rows.First().Count();
+            // ========= Freeze Pane + AutoFilter written as XML elements ============
+            writer.WriteStartElement(new SheetViews());
+            writer.WriteStartElement(new SheetView() { WorkbookViewId = 0 });
+            writer.WriteStartElement(new Pane()
+            {
+                State = PaneStateValues.Frozen,
+                ActivePane = PaneValues.BottomLeft,
+                TopLeftCell = "A2",
+                VerticalSplit = 1
+            });
+            writer.WriteEndElement(); // </Pane>
+            writer.WriteStartElement(new Selection()
+            {
+                Pane = PaneValues.BottomLeft,
+                ActiveCell = "A2"
+            });
+            writer.WriteEndElement(); // </Selection>
+            writer.WriteEndElement(); // </SheetView>
+            writer.WriteEndElement(); // </SheetViews>
+            // =================================================================
+
+            // ===== Columns (fixed width = 20) =====
+            var first = rows.First();
+            int colCount = first.Length;
+
             writer.WriteStartElement(new Columns());
-            for (int i = 1; i <= columnCount; i++)
+            for (int i = 1; i <= colCount; i++)
             {
                 writer.WriteElement(new Column
                 {
@@ -71,35 +85,43 @@ namespace BlazorWebApp.Helpers
                 });
             }
             writer.WriteEndElement(); // </Columns>
-            // ==========================================
+            // ======================================
 
             writer.WriteStartElement(new SheetData());
 
-            foreach (var rowItems in rows)
+            bool isHeaderDone = false;
+
+            foreach (var rowData in rows)
             {
                 writer.WriteStartElement(new Row());
 
-                foreach (var value in rowItems)
+                foreach (var v in rowData)
                 {
-                    writer.WriteElement(CreateCell(value));
+                    writer.WriteElement(CreateCell(v));
                 }
 
                 writer.WriteEndElement(); // </Row>
+
+                if (!isHeaderDone)
+                {
+                    // AutoFilter must be directly after header row
+                    string lastColumn = ToCol(colCount);
+
+                    writer.WriteStartElement(new AutoFilter() { Reference = $"A1:{lastColumn}1" });
+                    writer.WriteEndElement(); // </AutoFilter>
+                    isHeaderDone = true;
+                }
             }
 
             writer.WriteEndElement(); // </SheetData>
             writer.WriteEndElement(); // </Worksheet>
         }
 
-        // -----------------------------
-        // Cell creation (type aware)
-        // -----------------------------
         private static Cell CreateCell(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return new Cell { DataType = CellValues.String, CellValue = new CellValue("") };
 
-            // Number?
             if (double.TryParse(value, out double num))
                 return new Cell
                 {
@@ -107,7 +129,6 @@ namespace BlazorWebApp.Helpers
                     CellValue = new CellValue(num.ToString(System.Globalization.CultureInfo.InvariantCulture))
                 };
 
-            // Date?
             if (DateTime.TryParse(value, out var dt))
                 return new Cell
                 {
@@ -115,7 +136,6 @@ namespace BlazorWebApp.Helpers
                     CellValue = new CellValue(dt.ToString("yyyy-MM-dd"))
                 };
 
-            // Default: string
             return new Cell
             {
                 DataType = CellValues.String,
@@ -123,64 +143,17 @@ namespace BlazorWebApp.Helpers
             };
         }
 
-        // -----------------------------
-        // Freeze header row
-        // -----------------------------
-        private static void AddFreezePane(WorksheetPart wsPart)
+        // Convert number to column letters
+        private static string ToCol(int col)
         {
-            var ws = wsPart.Worksheet;
-
-            var sheetViews = new SheetViews();
-            var view = new SheetView { WorkbookViewId = 0 };
-
-            view.Append(new Pane
-            {
-                VerticalSplit = 1D,
-                TopLeftCell = "A2",
-                ActivePane = PaneValues.BottomLeft,
-                State = PaneStateValues.Frozen
-            });
-
-            sheetViews.Append(view);
-
-            ws.InsertAt(sheetViews, 0);
-        }
-
-        // -----------------------------
-        // AutoFilter on first row
-        // -----------------------------
-        private static void AddAutoFilter(WorksheetPart wsPart, int columnCount)
-        {
-            string lastColumn = ToExcelColumnName(columnCount);
-            string range = $"A1:{lastColumn}1";
-
-            wsPart.Worksheet.Append(new AutoFilter { Reference = range });
-        }
-
-        // Convert 1 → A, 27 → AA
-        private static string ToExcelColumnName(int col)
-        {
-            string result = "";
+            string s = "";
             while (col > 0)
             {
                 col--;
-                result = (char)('A' + col % 26) + result;
+                s = (char)('A' + (col % 26)) + s;
                 col /= 26;
             }
-            return result;
-        }
-
-        // --------------------------------
-        // Minimal stylesheet for fast write
-        // --------------------------------
-        private static Stylesheet CreateMinimalStylesheet()
-        {
-            return new Stylesheet(
-                new Fonts(new Font()),
-                new Fills(new Fill(new PatternFill())),
-                new Borders(new Border()),
-                new CellFormats(new CellFormat())
-            );
+            return s;
         }
     }
 }
