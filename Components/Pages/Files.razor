@@ -45,14 +45,14 @@ else
 }
 
 @code {
-    private List<(string ClientName, string FileName)> files;
+    private List<(string ClientName, string FileName)>? files;
 
-    [Inject] BlazorWebApp.Services.GlobalStatisticsCache Cache { get; set; }
+    [Inject] BlazorWebApp.Services.GlobalStatisticsCache? Cache { get; set; }
 
     protected override void OnInitialized()
     {
         //files = FileService.GetAllFiles();
-        if (Cache.IsReady)
+        if (Cache != null && Cache.IsReady)
         {
             files = Cache.Customers
             .SelectMany(c => c.Value.Files.Select(f => (c.Key, f))).OrderBy(item => item.Key)
@@ -79,7 +79,7 @@ else
         bool success = FileService.DeleteFile(client, file);
         if (success)
         {
-            files.RemoveAll(f => f.ClientName == client && f.FileName == file);
+            files!.RemoveAll(f => f.ClientName == client && f.FileName == file);
             StateHasChanged();
         }
         else
