@@ -9,10 +9,10 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        if (ctx.User.Identity.IsAuthenticated)
+        if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
+            Nav.NavigateTo("/login", true);
         }
-        Nav.NavigateTo("/login", true);
     }
 }
