@@ -12,7 +12,7 @@
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
-            Nav.NavigateTo("/login", true);
         }
+        Nav.NavigateTo("/login", true);
     }
 }
