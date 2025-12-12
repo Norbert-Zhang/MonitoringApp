@@ -9,7 +9,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
+        //await base.OnInitializedAsync();
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
