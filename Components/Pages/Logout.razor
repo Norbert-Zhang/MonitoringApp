@@ -2,7 +2,11 @@
 @attribute [AllowAnonymous]
 @inject NavigationManager Nav
 
-<h3>Logout...</h3>
+<div class="d-flex justify-content-center align-items-center" style="height:80vh;">
+    <div class="text-center p-4 shadow-lg">
+        <h3 class="mb-2 text-dark fw-bold">You have successfully logged out of the application.</h3>
+    </div>
+</div>
 
 @code {
 
@@ -12,7 +16,6 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        Thread.Sleep(200);
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
