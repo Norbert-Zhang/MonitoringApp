@@ -136,7 +136,7 @@ app.MapPost("/api/upload-xml", async (
     cache.AddFile(client, savePath);
 
     return Results.Ok($"Successfully uploaded: the '{file.FileName}' file for customer '{client}'.");
-});
+}); // Protect with api-key!!
 
 // XML-File download API
 app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
@@ -148,7 +148,8 @@ app.MapGet("/download", (string client, string file, IWebHostEnvironment env) =>
 
     var bytes = System.IO.File.ReadAllBytes(path);
     return Results.File(bytes, "application/xml", file);
-});
+})
+    .RequireAuthorization(policy => policy.RequireRole("Administrator")); // Protect with authentication (only the Role "Administrator")!!
 
 //Excel-File download API
 app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment env) =>
@@ -165,6 +166,7 @@ app.MapGet("/download-excel", (string client, string file, IWebHostEnvironment e
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         excelFileName
     );
-});
+})
+    .RequireAuthorization(policy => policy.RequireRole("Administrator")); // Protect with authentication (only the Role "Administrator")!!
 
 app.Run();
