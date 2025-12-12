@@ -2,6 +2,8 @@
 @attribute [AllowAnonymous]
 @inject NavigationManager Nav
 
+<h3>Logout...</h3>
+
 @code {
 
     [CascadingParameter]
@@ -9,11 +11,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        //await base.OnInitializedAsync();
+        await base.OnInitializedAsync();
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
+            Nav.NavigateTo("/login", true);
         }
-        Nav.NavigateTo("/login", true);
     }
 }
