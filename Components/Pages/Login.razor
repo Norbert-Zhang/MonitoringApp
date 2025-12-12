@@ -3,10 +3,15 @@
 @inject NavigationManager Nav
 @inject IConfiguration Config
 @using System.Security.Claims;
+@using System.ComponentModel.DataAnnotations;
 
 <div class="d-flex justify-content-center align-items-center" style="height:80vh;">
-    <div class="card shadow p-4" style="width: 380px;">
-        <h3 class="text-center mb-4">Login</h3>
+    <div class="card shadow p-4" style="width: 480px;">
+        <!-- Avatar Icon -->
+        <div class="text-center mb-1">
+            <i class="bi bi-person-circle text-primary" style="font-size: 64px;"></i>
+        </div>
+        <h3 class="text-center mb-2 text-dark fw-bold">LOGIN</h3>
 
         <EditForm Model="@loginModel"
                   OnValidSubmit="@SubmitLogin"
@@ -15,19 +20,19 @@
             <DataAnnotationsValidator />
 
             <div class="mb-3">
-                <label>Username</label>
-                <InputText class="form-control" @bind-Value="loginModel.Username" />
+                <label class="form-label fw-semibold">Username</label>
+                <InputText class="form-control modern-input" @bind-Value="loginModel.Username" />
             </div>
 
             <div class="mb-3">
-                <label>Password</label>
-                <InputText class="form-control" type="password"
+                <label class="form-label fw-semibold">Password</label>
+                <InputText class="form-control modern-input" type="password"
                            @bind-Value="loginModel.Password" />
             </div>
 
             <ValidationSummary />
 
-            <button type="submit" class="btn btn-primary w-100 mt-2">Login</button>
+            <button type="submit" class="btn btn-primary w-100 mt-2 login-btn">Login</button>
 
             @if (!string.IsNullOrEmpty(error))
             {
@@ -36,6 +41,7 @@
         </EditForm>
     </div>
 </div>
+
 @code {
 
     [CascadingParameter]
@@ -53,6 +59,7 @@
 
         var expectedUser = Config["AuthSettings:Username"];
         var expectedPass = Config["AuthSettings:Password"];
+        var expectedRole = Config["AuthSettings:Role"];
 
         if (user != expectedUser || pass != expectedPass)
         {
@@ -63,7 +70,7 @@
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user),
-            new Claim(ClaimTypes.Role, "User")
+            new Claim(ClaimTypes.Role, expectedRole ?? "User")
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -77,7 +84,9 @@
 
     public class LoginModel
     {
-        public string Username { get; set; } = "";
-        public string Password { get; set; } = "";
+        [Required(AllowEmptyStrings = false, ErrorMessage ="Please provide the user name")]
+        public string? Username { get; set; }
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Please provide the password")]
+        public string? Password { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @inject BlazorWebApp.Services.FileService FileService
 @inject IJSRuntime JS
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator")]
 
 <PageTitle>Files List</PageTitle>
 

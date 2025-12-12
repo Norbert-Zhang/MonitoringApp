@@ -1,0 +1,28 @@
+﻿@page "/access-denied"
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+
+<div class="d-flex justify-content-center align-items-center" style="height:80vh;">
+    <div class="text-center p-4 access-card shadow-lg">
+        <div class="mb-3">
+            <i class="bi bi-shield-lock-fill text-danger" style="font-size: 3rem;"></i>
+        </div>
+
+        <h3 class="mb-2 text-dark fw-bold">Access Denied</h3>
+        <p class="text-muted mb-4">
+            You don’t have permission to view this page.
+        </p>
+
+        <button class="btn btn-primary px-4" @onclick="GoHome">
+            Go to Home
+        </button>
+    </div>
+</div>
+
+@code {
+
+    void GoHome()
+    {
+        Nav.NavigateTo("/");
+    }
+}

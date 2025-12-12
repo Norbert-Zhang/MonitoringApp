@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @using System.Globalization
 @using Microsoft.JSInterop
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator, User")]
 
 <PageTitle>Dashboard</PageTitle>
 

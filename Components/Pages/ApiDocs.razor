@@ -1,6 +1,6 @@
 ﻿@page "/api-docs"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator, User")]
 
 <PageTitle>API Documentation</PageTitle>
 

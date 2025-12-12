@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @inject BlazorWebApp.Services.GlobalStatisticsCache Cache
 @inject IJSRuntime JS
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator, User")]
 
 <PageTitle>System Overview</PageTitle>
 

@@ -14,15 +14,13 @@ builder.Services
         options.Cookie.Name = "Monitor_Auth";
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
-        options.AccessDeniedPath = "/Error";
-        //options.Cookie.MaxAge = TimeSpan.FromDays(7);
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        options.AccessDeniedPath = "/access-denied";
+        options.Cookie.MaxAge = TimeSpan.FromDays(7);
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.HttpOnly = true;
         options.Cookie.Path = "/";
         options.Cookie.IsEssential = true;
-        options.SlidingExpiration = false;
     });
 // 2. Configure Authorization - Only needs to be called once
 builder.Services.AddAuthorization();

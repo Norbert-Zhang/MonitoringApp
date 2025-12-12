@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @inject BlazorWebApp.Services.FileService FileService
 @inject IWebHostEnvironment Env
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator, User")]
 
 <PageTitle>Home</PageTitle>
 
