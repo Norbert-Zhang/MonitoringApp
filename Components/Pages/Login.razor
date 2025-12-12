@@ -1,9 +1,12 @@
 ﻿@page "/login"
 @attribute [AllowAnonymous]
+
 @inject NavigationManager Nav
-@inject IConfiguration Config
+@inject List<AuthUser> Users
+
 @using System.Security.Claims;
 @using System.ComponentModel.DataAnnotations;
+@using BlazorWebApp.Models;
 
 <div class="d-flex justify-content-center align-items-center" style="height:80vh;">
     <div class="card shadow p-4" style="width: 480px;">
@@ -54,14 +57,14 @@
 
     private async Task SubmitLogin()
     {
-        var user = (loginModel.Username ?? "").Trim();
-        var pass = (loginModel.Password ?? "").Trim();
+        var user = loginModel.Username?.Trim() ?? "";
+        var pass = loginModel.Password?.Trim() ?? "";
 
-        var expectedUser = Config["AuthSettings:Username"];
-        var expectedPass = Config["AuthSettings:Password"];
-        var expectedRole = Config["AuthSettings:Role"];
+        var matchedUser = Users.FirstOrDefault(u =>
+            u.Username.Equals(user, StringComparison.OrdinalIgnoreCase) &&
+            u.Password == pass);
 
-        if (user != expectedUser || pass != expectedPass)
+        if (matchedUser == null)
         {
             error = "Invalid username or password.";
             return;
@@ -69,8 +72,8 @@
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, user),
-            new Claim(ClaimTypes.Role, expectedRole ?? "User")
+            new Claim(ClaimTypes.Name, matchedUser.Username),
+            new Claim(ClaimTypes.Role, matchedUser.Role ?? "User")
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -82,11 +85,4 @@
         Nav.NavigateTo("/", true);
     }
 
-    public class LoginModel
-    {
-        [Required(AllowEmptyStrings = false, ErrorMessage ="Please provide the user name")]
-        public string? Username { get; set; }
-        [Required(AllowEmptyStrings = false, ErrorMessage = "Please provide the password")]
-        public string? Password { get; set; }
-    }
 }

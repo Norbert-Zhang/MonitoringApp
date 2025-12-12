@@ -1,4 +1,5 @@
 ﻿using BlazorWebApp.Components;
+using BlazorWebApp.Models;
 using BlazorWebApp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
@@ -58,6 +59,12 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
+
+// Ensure the "users" object is not nullable before passing it to AddSingleton.
+var users = builder.Configuration
+    .GetSection("AuthSettings:Users")
+    .Get<List<AuthUser>>() ?? new List<AuthUser>();
+builder.Services.AddSingleton(users);
 
 var app = builder.Build();
 
