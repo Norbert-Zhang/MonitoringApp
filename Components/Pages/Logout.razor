@@ -7,15 +7,13 @@
 @code {
 
     [CascadingParameter]
-    private Task<AuthenticationState> authenticationStateTask { get; set; }
-
-    [CascadingParameter]
     public HttpContext? ctx { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var authenticationState = await authenticationStateTask;
-        if (authenticationState.User.Identity.IsAuthenticated)
+        await base.OnInitializedAsync();
+        Thread.Sleep(200);
+        if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
             Nav.NavigateTo("/login", true);
