@@ -1,0 +1,83 @@
+﻿@page "/login"
+@attribute [AllowAnonymous]
+@inject NavigationManager Nav
+@inject IConfiguration Config
+@using System.Security.Claims;
+
+<div class="d-flex justify-content-center align-items-center" style="height:80vh;">
+    <div class="card shadow p-4" style="width: 380px;">
+        <h3 class="text-center mb-4">Login</h3>
+
+        <EditForm Model="@loginModel"
+                  OnValidSubmit="@SubmitLogin"
+                  FormName="LoginForm">
+
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label>Username</label>
+                <InputText class="form-control" @bind-Value="loginModel.Username" />
+            </div>
+
+            <div class="mb-3">
+                <label>Password</label>
+                <InputText class="form-control" type="password"
+                           @bind-Value="loginModel.Password" />
+            </div>
+
+            <ValidationSummary />
+
+            <button type="submit" class="btn btn-primary w-100 mt-2">Login</button>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger mt-3">@error</div>
+            }
+        </EditForm>
+    </div>
+</div>
+@code {
+
+    [CascadingParameter]
+    public HttpContext? ctx { get; set; }
+
+    [SupplyParameterFromForm]
+    public LoginModel loginModel { get; set; } = new();
+
+    private string error = "";
+
+    private async Task SubmitLogin()
+    {
+        var user = (loginModel.Username ?? "").Trim();
+        var pass = (loginModel.Password ?? "").Trim();
+
+        var expectedUser = Config["AuthSettings:Username"];
+        var expectedPass = Config["AuthSettings:Password"];
+
+        if (user != expectedUser || pass != expectedPass)
+        {
+            error = "Invalid username or password.";
+            return;
+        }
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user),
+            new Claim(ClaimTypes.Role, "User")
+        };
+
+        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        var principal = new ClaimsPrincipal(claimsIdentity);
+
+        await ctx!.SignInAsync(principal);
+
+        Nav.NavigateTo("/", true);
+    }
+
+    public class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

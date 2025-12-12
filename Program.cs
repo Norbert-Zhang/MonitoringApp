@@ -1,27 +1,51 @@
-using BlazorWebApp.Components;
-using BlazorWebApp.Helpers;
+﻿using BlazorWebApp.Components;
 using BlazorWebApp.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Enable authentication
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.Cookie.Name = "Monitor_Auth";
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/Error";
+        //options.Cookie.MaxAge = TimeSpan.FromDays(7);
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.Path = "/";
+        options.Cookie.IsEssential = true;
+        options.SlidingExpiration = false;
+    });
+// 2. Configure Authorization - Only needs to be called once
+builder.Services.AddAuthorization();
+
+// 3. Add Blazor service - note the order
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// 4. Add Blazor-specific authentication services - must be done after AddRazorComponents.
+builder.Services.AddCascadingAuthenticationState();
+
+// 5. Other service registration
 builder.Services.AddServerSideBlazor(options =>
 {
     options.DetailedErrors = true;
 });
-
-
 // Add the services
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<XmlStatisticsService>();
 builder.Services.AddSingleton<GlobalStatisticsCache>();
 builder.Services.AddHostedService<CachePreloader>();
 builder.Services.AddHttpClient();
+//builder.Services.AddHttpContextAccessor();
 
 // Upload File Max size Config
 builder.Services.Configure<FormOptions>(options =>
@@ -39,11 +63,7 @@ var apiToken = builder.Configuration["ApiSettings:UploadApiToken"];
 
 var app = builder.Build();
 
-// ------------------- Global cache initialization -------------------
-var cache = app.Services.GetRequiredService<GlobalStatisticsCache>();
-//cache.Initialize();
-
-// Configure the HTTP request pipeline.
+// 6. Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -52,12 +72,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+// 7. Static file middleware
 app.UseStaticFiles();
+
+//app.UseRouting();
+// 8. Authentication middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 9. Antiforgery Middleware
 app.UseAntiforgery();
 
+// 10. Map Blazor components
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// ------------------- Global cache initialization -------------------
+var cache = app.Services.GetRequiredService<GlobalStatisticsCache>();
+//cache.Initialize();
 
 // XML-File upload API
 app.MapPost("/api/upload-xml", async (
