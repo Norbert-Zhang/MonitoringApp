@@ -1,6 +1,6 @@
 ﻿@page "/access-denied"
 @rendermode InteractiveServer
-@attribute [AllowAnonymous]
+@attribute [Authorize(Roles = "Administrator, User")]
 @inject NavigationManager Nav
 
 <div class="d-flex justify-content-center align-items-center" style="height:80vh;">
