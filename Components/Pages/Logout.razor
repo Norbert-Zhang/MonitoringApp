@@ -41,7 +41,7 @@
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
-            Nav.NavigateTo("/logout", true);
+            Nav.NavigateTo("/login", true);
         }
     }
 

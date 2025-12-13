@@ -59,6 +59,7 @@ h1:focus {
     transition: all 0.2s ease-in-out;
     color: black;
     font-size: 1em;
+    margin-left: 5px !important;
 }
     .logout-link:hover {
         background-color: rgba(255, 255, 255, 0.30);
