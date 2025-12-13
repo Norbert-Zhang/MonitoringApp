@@ -1,25 +1,53 @@
 ﻿@page "/logout"
+@rendermode InteractiveServer
 @attribute [AllowAnonymous]
 @inject NavigationManager Nav
 
 <div class="d-flex justify-content-center align-items-center" style="height:80vh;">
-    <div class="text-center p-4 shadow-lg">
-        <h3 class="mb-2 text-dark fw-bold">You have successfully logged out of the application.</h3>
+    <div class="card shadow-lg border-0" style="max-width:420px;">
+        <div class="card-body text-center p-5">
+            <!-- Icon -->
+            <div class="mb-4">
+                <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center"
+                     style="width:80px;height:80px;">
+                    <i class="bi bi-box-arrow-right text-success fs-1"></i>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <h4 class="fw-bold mb-2">Successfully Logged Out</h4>
+
+            <!-- Description -->
+            <p class="text-muted mb-4">
+                You have safely signed out of the application.
+            </p>
+
+            <!-- Action -->
+            <button class="btn btn-primary w-100"
+                    @onclick="GoToLogin">
+                Return to Login
+            </button>
+        </div>
     </div>
 </div>
 
 @code {
-
     [CascadingParameter]
     public HttpContext? ctx { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
         if (ctx?.User?.Identity?.IsAuthenticated ?? false)
         {
             await ctx.SignOutAsync();
-            Nav.NavigateTo("/login", true);
+            Nav.NavigateTo("/logout", true);
         }
+    }
+
+    void GoToLogin()
+    {
+        Nav.NavigateTo("/login", true);
     }
 }
