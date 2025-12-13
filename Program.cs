@@ -17,11 +17,11 @@ builder.Services
         options.LogoutPath = "/logout";
         options.AccessDeniedPath = "/access-denied";
         options.Cookie.MaxAge = TimeSpan.FromDays(7);
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.HttpOnly = true;
-        options.Cookie.Path = "/";
-        options.Cookie.IsEssential = true;
+        //options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        //options.Cookie.SameSite = SameSiteMode.Lax;
+        //options.Cookie.HttpOnly = true;
+        //options.Cookie.Path = "/";
+        //options.Cookie.IsEssential = true;
     });
 // 2. Configure Authorization - Only needs to be called once
 builder.Services.AddAuthorization();
