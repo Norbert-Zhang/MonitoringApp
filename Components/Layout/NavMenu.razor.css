@@ -89,6 +89,13 @@
     display: block;
 }
 
+/* ------ Custom Styles ------*/
+.nav-link i {
+    font-size: 1.2rem;
+    color: white;
+    height: 45px;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;
