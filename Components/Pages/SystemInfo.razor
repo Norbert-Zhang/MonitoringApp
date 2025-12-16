@@ -110,6 +110,22 @@
         </ul>
     </li>
 
+    <!-- Authentication & Authorization -->
+    <li class="list-group-item">
+        <strong>7. User Authentication & Authorization</strong><br />
+        The application is protected by a built-in authentication and role-based authorization system.<br />
+        Key features include:
+        <ul>
+            <li>Secure login page with username and password authentication</li>
+            <li>User credentials and roles centrally managed via <code>appsettings.json</code></li>
+            <li>Cookie-based authentication for persistent login sessions</li>
+            <li>Role-based access control using <b>User</b> and <b>Administrator</b> roles</li>
+            <li>Automatic redirection to Login page for unauthenticated users</li>
+            <li>AccessDenied page for insufficient permissions</li>
+            <li>Protected download endpoints available only to authenticated users</li>
+        </ul>
+    </li>
+
 </ul>
 
 <hr />
@@ -152,6 +168,19 @@
             <li>PNG export with spacing and clean layout</li>
         </ul>
     </li>
+
+    <!-- Security & Authentication -->
+    <li class="list-group-item">
+        <strong>Security & Authentication Architecture</strong><br />
+        The system leverages ASP.NET Core Authentication and Authorization mechanisms:
+        <ul>
+            <li>Cookie Authentication middleware</li>
+            <li>Claims-based identity with role support</li>
+            <li>AuthorizeView and AuthorizeRouteView integration in Blazor</li>
+            <li>Secure session handling across Server-Side Blazor connections</li>
+        </ul>
+    </li>
+
 </ul>
 
 <hr />
