@@ -1,6 +1,22 @@
 ﻿window.dashboardChart = {
     current: null,
 
+    // =========================
+    // NEW: generate distinct colors
+    // =========================
+    generateDistinctColors: function (count) {
+        const colors = [];
+        const saturation = 70;
+        const lightness = 50;
+
+        for (let i = 0; i < count; i++) {
+            const hue = Math.round((360 / count) * i);
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        }
+
+        return colors;
+    },
+
     renderChart: function (canvasId, labels, datasets, chartType) {
         // ---- Completely destroy all charts bound to this canvas. ----
         if (window.dashboardChart.current) {
@@ -22,16 +38,29 @@
 
         // ---- Create a new chart ----
         const ctx = document.getElementById(canvasId).getContext('2d');  //const canvas = document.getElementById(canvasId);
+        // assign non-repeating colors
+        const colors = window.dashboardChart.generateDistinctColors(datasets.length);
+
         window.dashboardChart.current = new Chart(ctx, {
             type: chartType,
             data: {
                 labels: labels,
-                datasets: datasets.map(ds => ({
+                datasets: datasets.map((ds, index)=> ({
                     label: ds.label,
                     data: ds.data,
                     fill: false,
                     tension: 0.3,
                     borderWidth: 2,
+
+                    // ===== color assignment =====
+                    borderColor: colors[index],
+                    backgroundColor:
+                        chartType === "bar"
+                            ? colors[index].replace(")", ", 0.6)").replace("hsl", "hsla")
+                            : colors[index],
+
+                    pointBackgroundColor: colors[index],
+                    pointBorderColor: colors[index]
                 }))
             },
             options: {
@@ -89,3 +118,17 @@
     }
 
 };
+
+window.downloadFileFromBytes = (fileName, contentType, bytes) => {
+    const blob = new Blob([bytes], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+

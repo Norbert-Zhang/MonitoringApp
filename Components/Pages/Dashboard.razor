@@ -2,6 +2,8 @@
 @rendermode InteractiveServer
 @using System.Globalization
 @using Microsoft.JSInterop
+@using ClosedXML.Excel
+@using System.IO
 @attribute [Authorize(Roles = "Administrator, User")]
 
 <PageTitle>Dashboard</PageTitle>
@@ -46,6 +48,11 @@
     <div>
         <button class="btn btn-secondary" @onclick="ExportChart">
             Export as PNG
+        </button>
+    </div>
+    <div>
+        <button class="btn btn-success" @onclick="ExportExcel">
+            Export as Excel
         </button>
     </div>
 </div>
@@ -126,7 +133,7 @@
                     }
                     else if (mode == "month" && r.Level == "MonthStatistics") // month
                     {
-                        return (!fromDate.HasValue || (r.Date.Year >= fromDate.Value.Year && r.Date.Month >= fromDate.Value.Month)) && (!toDate.HasValue || (r.Date.Year <= toDate.Value.Year && r.Date.Month <= toDate.Value.Month));
+                        return (!fromDate.HasValue || (r.Date.Year > fromDate.Value.Year || (r.Date.Year == fromDate.Value.Year && r.Date.Month >= fromDate.Value.Month))) && (!toDate.HasValue || (r.Date.Year < toDate.Value.Year || (r.Date.Year == toDate.Value.Year && r.Date.Month <= toDate.Value.Month)));
                     }
                     return false;
                 }
@@ -180,4 +187,82 @@
             }
         ).Cast<object>().ToList();
     }
+
+    private async Task ExportExcel()
+    {
+        if (data == null || data.Count == 0)
+            return;
+
+        var filtered = FilterDataByDateRange();
+        var labels = GetLabels(filtered);
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Dashboard");
+
+        // ---- Header ----
+        sheet.Cell(1, 1).Value = "Customer";
+        for (int i = 0; i < labels.Count; i++)
+        {
+            sheet.Cell(1, i + 2).Value = labels[i];
+        }
+
+        // ---- Data ----
+        int row = 2;
+        foreach (var client in filtered)
+        {
+            sheet.Cell(row, 1).Value = client.Key;
+
+            for (int i = 0; i < labels.Count; i++)
+            {
+                var label = labels[i];
+
+                var sum = client.Value
+                    .Where(v =>
+                        mode == "year"
+                            ? v.Level == "YearStatistics" && v.Date.Year.ToString() == label
+                            : v.Level == "MonthStatistics" && $"{v.Date.Year}-{v.Date.Month:00}" == label
+                    )
+                    .Sum(x => x.Count);
+
+                sheet.Cell(row, i + 2).Value = sum;
+            }
+
+            row++;
+        }
+
+        // ---- Header Style ----
+        var headerRange = sheet.Range(1, 1, 1, labels.Count + 1);
+        headerRange.Style.NumberFormat.Format = "General";
+        headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#DDEBF7");
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        headerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+        // Enable the filtering function (Excel top drop-down menu)
+        headerRange.SetAutoFilter();
+        // Freeze the first row (to prevent the table header from being lost when scrolling).
+        sheet.SheetView.FreezeRows(1);
+        // Format the numbers (integers).
+        sheet.Range(2, 2, sheet.LastRowUsed()!.RowNumber(), labels.Count + 1).Style.NumberFormat.Format = "#,##0";
+        // 
+        sheet.Column(1).AdjustToContents();
+        int lastColumn = labels.Count + 1;
+        for (int col = 2; col <= lastColumn; col++)
+        {
+            sheet.Column(col).Width = 15;
+        }
+
+        // ---- Save to Memory ----
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var bytes = stream.ToArray();
+
+        // ---- Trigger browser download ----
+        await JS.InvokeVoidAsync(
+            "downloadFileFromBytes",
+            "Dashboard.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            bytes
+        );
+    }
+
 }
